@@ -1,8 +1,12 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-puts 'Rails/RSpec adapter starting...'
+require_relative '../../lib/executor'
 
-load File.expand_path('../nova_worker_agent', __dir__)
+executor = Executor.new
+executor.start_stream
+executor.clone_repo
 
-puts 'Rails/RSpec adapter complete.'
+puts 'Rails/RSpec adapter running...'
+
+executor.kill_stream
