@@ -8,17 +8,14 @@ require_relative '../lib/saturn_ci_worker_api/request'
 host = ENV.fetch('SATURNCI_API_HOST')
 task_id = ENV.fetch('TASK_ID')
 
-puts 'Sending hello world to system logs...'
-body = Base64.encode64('Hello from K8s worker!')
 SaturnCIWorkerAPI::Request.new(
   host: host,
   method: :post,
   endpoint: "tasks/#{task_id}/system_logs",
-  body: body,
+  body: Base64.encode64("Hello from K8s worker!\nTask ID: #{task_id}"),
   content_type: 'text/plain'
 ).execute
 
-puts 'Fetching task info...'
 response = SaturnCIWorkerAPI::Request.new(
   host: host,
   method: :get,
@@ -47,5 +44,3 @@ SaturnCIWorkerAPI::Request.new(
   body: body,
   content_type: 'text/plain'
 ).execute
-
-puts 'Done'
