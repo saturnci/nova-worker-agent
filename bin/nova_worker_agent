@@ -11,21 +11,37 @@ require_relative '../lib/saturn_ci_worker_api/stream'
 host = ENV.fetch('SATURNCI_API_HOST')
 task_id = ENV.fetch('TASK_ID')
 
-SaturnCIWorkerAPI::Request.new(
-  host: host,
-  method: :post,
-  endpoint: "tasks/#{task_id}/system_logs",
-  body: Base64.encode64("Worker started. Waiting for log streaming to begin...\n"),
-  content_type: 'text/plain'
-).execute
+def log_direct(host, task_id, message)
+  SaturnCIWorkerAPI::Request.new(
+    host: host,
+    method: :post,
+    endpoint: "tasks/#{task_id}/system_logs",
+    body: Base64.encode64("#{message}\n"),
+    content_type: 'text/plain'
+  ).execute
+end
+
+log_direct(host, task_id, 'Worker started. Checking /var/log/syslog...')
+
+syslog_path = '/var/log/syslog'
+if File.exist?(syslog_path)
+  line_count = File.readlines(syslog_path).count
+  log_direct(host, task_id, "/var/log/syslog exists. Line count: #{line_count}")
+else
+  log_direct(host, task_id, '/var/log/syslog does NOT exist!')
+end
+
+log_direct(host, task_id, 'Starting stream and waiting 5 seconds...')
 
 syslog_stream = SaturnCIWorkerAPI::Stream.new(
-  '/var/log/syslog',
+  syslog_path,
   "tasks/#{task_id}/system_logs",
   wait_interval: 1
 )
 syslog_stream.start
 sleep 5
+
+log_direct(host, task_id, 'Sleep done. Now trying puts...')
 
 puts "Hello from K8s worker! Task ID: \"#{task_id}\""
 
