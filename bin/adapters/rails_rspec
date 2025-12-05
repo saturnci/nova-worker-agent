@@ -9,10 +9,8 @@ puts 'Adapter: Ruby on Rails/Rspec'
 
 executor.clone_repo
 
-puts "Current directory: #{Dir.pwd}"
-puts "Gemfile exists: #{File.exist?('Gemfile')}"
-puts 'Running bundle install...'
-system('bundle install 2>&1')
+puts 'Running docker compose build...'
+system('docker compose build 2>&1')
 
 puts 'Run finished.'
 executor.kill_stream
