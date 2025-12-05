@@ -71,6 +71,7 @@ class Executor
     system("git checkout #{@task_info['commit_hash']}")
 
     puts 'Repo cloned and checked out successfully.'
+    system('ls -la 2>&1')
   end
 
   def kill_stream
