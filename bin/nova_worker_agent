@@ -1,26 +1,23 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+$stdout.sync = true
+
 require 'json'
 require_relative '../lib/saturn_ci_worker_api/request'
 require_relative '../lib/saturn_ci_worker_api/stream'
 
 host = ENV.fetch('SATURNCI_API_HOST')
 task_id = ENV.fetch('TASK_ID')
-syslog_path = "/tmp/syslog_#{task_id}.log"
-
-File.write(syslog_path, '')
-
-syslog = ->(message) { File.open(syslog_path, 'a') { |f| f.puts(message) } }
 
 syslog_stream = SaturnCIWorkerAPI::Stream.new(
-  syslog_path,
+  '/var/log/syslog',
   "tasks/#{task_id}/system_logs",
   wait_interval: 1
 )
 syslog_stream.start
 
-syslog.call "Hello from K8s worker! Task ID: \"#{task_id}\""
+puts "Hello from K8s worker! Task ID: \"#{task_id}\""
 
 response = SaturnCIWorkerAPI::Request.new(
   host: host,
@@ -30,7 +27,7 @@ response = SaturnCIWorkerAPI::Request.new(
 
 task_info = JSON.parse(response.body)
 
-syslog.call <<~OUTPUT
+puts <<~OUTPUT
   Task info received:
     github_repo_full_name: #{task_info['github_repo_full_name']}
     branch_name: #{task_info['branch_name']}
