@@ -1,9 +1,8 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# K8s entry point - hello world version
-
 require 'base64'
+require 'json'
 require_relative '../lib/saturn_ci_worker_api/request'
 
 host = ENV.fetch('SATURNCI_API_HOST')
@@ -11,6 +10,36 @@ task_id = ENV.fetch('TASK_ID')
 
 puts 'Sending hello world to system logs...'
 body = Base64.encode64('Hello from K8s worker!')
+SaturnCIWorkerAPI::Request.new(
+  host: host,
+  method: :post,
+  endpoint: "tasks/#{task_id}/system_logs",
+  body: body,
+  content_type: 'text/plain'
+).execute
+
+puts 'Fetching task info...'
+response = SaturnCIWorkerAPI::Request.new(
+  host: host,
+  method: :get,
+  endpoint: "tasks/#{task_id}"
+).execute
+
+task_info = JSON.parse(response.body)
+
+output = <<~OUTPUT
+  Task info received:
+    github_repo_full_name: #{task_info['github_repo_full_name']}
+    branch_name: #{task_info['branch_name']}
+    commit_hash: #{task_info['commit_hash']}
+    github_installation_id: #{task_info['github_installation_id']}
+    rspec_seed: #{task_info['rspec_seed']}
+    run_order_index: #{task_info['run_order_index']}
+    number_of_concurrent_runs: #{task_info['number_of_concurrent_runs']}
+    env_vars: [#{task_info['env_vars'].keys.join(', ')}]
+OUTPUT
+
+body = Base64.encode64(output)
 SaturnCIWorkerAPI::Request.new(
   host: host,
   method: :post,
