@@ -12,7 +12,7 @@ SaturnCIWorkerAPI::Request.new(
   host: host,
   method: :post,
   endpoint: "tasks/#{task_id}/system_logs",
-  body: Base64.encode64("Hello from K8s worker! Task ID: \"#{task_id}\""),
+  body: Base64.encode64("Hello from K8s worker! Task ID: \"#{task_id}\"\n\n"),
   content_type: 'text/plain'
 ).execute
 
