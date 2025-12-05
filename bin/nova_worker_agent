@@ -7,6 +7,9 @@ require_relative '../lib/saturn_ci_worker_api/request'
 
 host = ENV.fetch('SATURNCI_API_HOST')
 task_id = ENV.fetch('TASK_ID')
+worker_name = ENV.fetch('WORKER_NAME', 'unknown')
+
+puts "Worker: #{worker_name}"
 
 puts 'Sending hello world to system logs...'
 body = Base64.encode64('Hello from K8s worker!')
