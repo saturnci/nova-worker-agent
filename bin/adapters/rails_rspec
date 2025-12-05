@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+puts 'Rails/RSpec adapter starting...'
+
+load File.expand_path('../nova_worker_agent', __dir__)
+
+puts 'Rails/RSpec adapter complete.'

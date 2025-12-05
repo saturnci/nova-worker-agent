@@ -14,5 +14,5 @@ RUN bundle config set --local without 'development test' && bundle install
 
 COPY . .
 
-# Entry point that receives assignment via env vars (no polling)
-CMD ["ruby", "bin/nova_worker_agent"]
+# Entry point - Rails/RSpec adapter is the default
+CMD ["ruby", "bin/adapters/rails_rspec"]
