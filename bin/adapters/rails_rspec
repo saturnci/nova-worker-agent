@@ -5,7 +5,7 @@ require_relative '../../lib/executor'
 
 executor = Executor.new
 executor.start_stream
-puts 'Rails/RSpec adapter running...'
+puts 'Adapter: Ruby on Rails/Rspec'
 
 executor.clone_repo
 

@@ -29,7 +29,7 @@ class Executor
     @stream.start
     sleep 1
 
-    puts "Hello from K8s worker! Task ID: \"#{@task_id}\""
+    puts "Task ID: \"#{@task_id}\""
 
     response = SaturnCIWorkerAPI::Request.new(
       host: @host,
