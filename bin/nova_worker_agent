@@ -1,20 +1,26 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'base64'
 require 'json'
 require_relative '../lib/saturn_ci_worker_api/request'
+require_relative '../lib/saturn_ci_worker_api/stream'
 
 host = ENV.fetch('SATURNCI_API_HOST')
 task_id = ENV.fetch('TASK_ID')
+syslog_path = "/tmp/syslog_#{task_id}.log"
 
-SaturnCIWorkerAPI::Request.new(
-  host: host,
-  method: :post,
-  endpoint: "tasks/#{task_id}/system_logs",
-  body: Base64.encode64("Hello from K8s worker! Task ID: \"#{task_id}\"\n\n"),
-  content_type: 'text/plain'
-).execute
+File.write(syslog_path, '')
+
+syslog = ->(message) { File.open(syslog_path, 'a') { |f| f.puts(message) } }
+
+syslog_stream = SaturnCIWorkerAPI::Stream.new(
+  syslog_path,
+  "tasks/#{task_id}/system_logs",
+  wait_interval: 1
+)
+syslog_stream.start
+
+syslog.call "Hello from K8s worker! Task ID: \"#{task_id}\""
 
 response = SaturnCIWorkerAPI::Request.new(
   host: host,
@@ -24,7 +30,7 @@ response = SaturnCIWorkerAPI::Request.new(
 
 task_info = JSON.parse(response.body)
 
-output = <<~OUTPUT
+syslog.call <<~OUTPUT
   Task info received:
     github_repo_full_name: #{task_info['github_repo_full_name']}
     branch_name: #{task_info['branch_name']}
@@ -36,11 +42,5 @@ output = <<~OUTPUT
     env_vars: [#{task_info['env_vars'].keys.join(', ')}]
 OUTPUT
 
-body = Base64.encode64(output)
-SaturnCIWorkerAPI::Request.new(
-  host: host,
-  method: :post,
-  endpoint: "tasks/#{task_id}/system_logs",
-  body: body,
-  content_type: 'text/plain'
-).execute
+sleep 2
+syslog_stream.kill
