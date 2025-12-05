@@ -3,6 +3,7 @@
 
 $stdout.sync = true
 
+require 'base64'
 require 'json'
 require_relative '../lib/saturn_ci_worker_api/request'
 require_relative '../lib/saturn_ci_worker_api/stream'
@@ -10,12 +11,21 @@ require_relative '../lib/saturn_ci_worker_api/stream'
 host = ENV.fetch('SATURNCI_API_HOST')
 task_id = ENV.fetch('TASK_ID')
 
+SaturnCIWorkerAPI::Request.new(
+  host: host,
+  method: :post,
+  endpoint: "tasks/#{task_id}/system_logs",
+  body: Base64.encode64("Worker started. Waiting for log streaming to begin...\n"),
+  content_type: 'text/plain'
+).execute
+
 syslog_stream = SaturnCIWorkerAPI::Stream.new(
   '/var/log/syslog',
   "tasks/#{task_id}/system_logs",
   wait_interval: 1
 )
 syslog_stream.start
+sleep 5
 
 puts "Hello from K8s worker! Task ID: \"#{task_id}\""
 
