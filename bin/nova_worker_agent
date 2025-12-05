@@ -45,7 +45,7 @@ puts <<~OUTPUT
     env_vars: [#{task_info['env_vars'].keys.join(', ')}]
 OUTPUT
 
-PROJECT_DIR = '/project'
+PROJECT_DIR = '/app'
 
 puts 'Getting GitHub token...'
 token_response = SaturnCIWorkerAPI::Request.new(
