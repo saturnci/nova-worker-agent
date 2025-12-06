@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require_relative '../../lib/executor'
+require_relative '../../lib/saturn_ci_worker_api/request'
 
 executor = Executor.new
 executor.start_stream
@@ -18,5 +19,16 @@ unless executor.build_with_cache
 end
 
 puts 'Run finished.'
+
+test_suite_run_id = executor.task_info['test_suite_run_id']
+puts "Setting dry_run_example_count to 0 for test_suite_run #{test_suite_run_id}..."
+response = SaturnCIWorkerAPI::Request.new(
+  host: ENV.fetch('SATURNCI_API_HOST'),
+  method: :patch,
+  endpoint: "test_suite_runs/#{test_suite_run_id}",
+  body: { dry_run_example_count: 0 }.to_json
+).execute
+puts "dry_run_example_count response code: #{response.code}"
+
 executor.finish
 executor.kill_stream
