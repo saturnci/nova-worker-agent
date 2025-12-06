@@ -51,7 +51,8 @@ test_output_stream.kill
 puts "COMMAND_EXIT_CODE=#{rspec_exit_code}"
 
 test_output = File.read(test_output_file)
-example_count = test_output.match(/(\d+) examples?/)&.captures&.first&.to_i || 0
+match = test_output.match(/(\d+) examples?/)
+example_count = match ? match[1].to_i : 0
 
 test_suite_run_id = task_info['test_suite_run_id']
 puts "Setting dry_run_example_count to #{example_count} for test_suite_run #{test_suite_run_id}..."
