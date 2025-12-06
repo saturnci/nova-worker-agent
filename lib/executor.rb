@@ -8,7 +8,7 @@ require_relative 'saturn_ci_worker_api/docker_registry_cache'
 
 class Executor
   LOG_PATH = '/tmp/output.log'
-  PROJECT_DIR = '/app'
+  PROJECT_DIR = '/repository'
 
   attr_reader :task_info
 
