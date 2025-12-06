@@ -11,10 +11,7 @@ module SaturnCIWorkerAPI
       @username = username
       @password = password
       @project_name = project_name
-      @branch_name = branch_name.gsub(/[^a-zA-Z0-9_.-]/, '-')[0...63]
-
-      # Registry cache IP is sometimes wrong without this.
-      system('sudo systemd-resolve --flush-caches')
+      @branch_name = branch_name&.gsub(/[^a-zA-Z0-9_.-]/, '-')&.slice(0, 63)
     end
 
     def image_url
@@ -22,12 +19,14 @@ module SaturnCIWorkerAPI
     end
 
     def authenticate
-      `echo '#{@password}' | docker login #{URL} -u #{@username} --password-stdin`
+      return false if @username.nil? || @password.nil?
+
+      system("echo '#{@password}' | docker login #{URL} -u #{@username} --password-stdin")
       $CHILD_STATUS.success?
     end
 
     def pull_image
-      output = `sudo docker pull #{image_url} 2>&1`
+      output = `docker pull #{image_url} 2>&1`
 
       if output.include?('not found') || output.include?('manifest unknown')
         "Docker registry cache miss. Image not found in registry: #{image_url}"
@@ -37,7 +36,7 @@ module SaturnCIWorkerAPI
     end
 
     def push_image
-      system("sudo docker push #{image_url}")
+      system("docker push #{image_url}")
     end
   end
 end

@@ -11,8 +11,11 @@ executor.clone_repo
 executor.write_env_file
 executor.wait_for_docker
 
-puts 'Running docker-compose build...'
-system('docker-compose -f .saturnci/docker-compose.yml build 2>&1')
+puts 'Building with cache...'
+unless executor.build_with_cache
+  puts 'Falling back to docker-compose build...'
+  system('docker-compose -f .saturnci/docker-compose.yml build 2>&1')
+end
 
 puts 'Run finished.'
 executor.kill_stream

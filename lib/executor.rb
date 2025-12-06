@@ -4,6 +4,7 @@ require 'fileutils'
 require 'json'
 require_relative 'saturn_ci_worker_api/request'
 require_relative 'saturn_ci_worker_api/stream'
+require_relative 'saturn_ci_worker_api/docker_registry_cache'
 
 class Executor
   LOG_PATH = '/tmp/output.log'
@@ -109,5 +110,37 @@ class Executor
 
       sleep 1
     end
+  end
+
+  def build_with_cache
+    registry_cache = SaturnCIWorkerAPI::DockerRegistryCache.new(
+      username: @task_info['docker_registry_cache_username'],
+      password: @task_info['docker_registry_cache_password'],
+      project_name: @task_info['project_name']&.downcase,
+      branch_name: @task_info['branch_name']&.downcase
+    )
+
+    puts 'Authenticating to Docker registry cache...'
+    unless registry_cache.authenticate
+      puts 'Warning: Docker registry cache authentication failed, building without cache'
+      return false
+    end
+
+    puts 'Creating buildx builder...'
+    system('docker buildx create --name saturnci-builder --driver docker-container --use 2>/dev/null || docker buildx use saturnci-builder')
+
+    image_url = registry_cache.image_url
+    build_command = [
+      'docker buildx build',
+      '--push',
+      "-t #{image_url}:latest",
+      "--cache-from type=registry,ref=#{image_url}:cache",
+      "--cache-to type=registry,ref=#{image_url}:cache,mode=max",
+      '--progress=plain',
+      '-f .saturnci/Dockerfile .'
+    ].join(' ')
+
+    puts "Build command: #{build_command}"
+    system(build_command)
   end
 end
