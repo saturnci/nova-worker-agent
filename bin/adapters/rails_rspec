@@ -12,60 +12,68 @@ DOCKER_SERVICE_NAME = 'saturn_test_app'
 
 executor = Executor.new
 executor.start_stream
-puts 'Adapter: Ruby on Rails/Rspec'
 
-executor.clone_repo
-executor.write_env_file
-executor.wait_for_docker
+begin
+  puts 'Adapter: Ruby on Rails/Rspec'
 
-puts 'Building with cache...'
-executor.build_with_cache
+  executor.clone_repo
+  executor.write_env_file
+  executor.wait_for_docker
 
-task_info = executor.task_info
-image_url = "registrycache.saturnci.com:5000/#{task_info['project_name']&.downcase}"
+  puts 'Building with cache...'
+  executor.build_with_cache
 
-puts 'Pulling image from registry...'
-system("docker pull #{image_url}:latest 2>&1")
+  task_info = executor.task_info
+  image_url = "registrycache.saturnci.com:5000/#{task_info['project_name']&.downcase}"
 
-puts 'Running pre.sh...'
-system('chmod +x .saturnci/pre.sh')
-system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} ./.saturnci/pre.sh 2>&1")
+  puts 'Pulling image from registry...'
+  system("docker pull #{image_url}:latest 2>&1")
 
-puts 'Running dry run...'
-dry_run = DryRun.new(docker_service_name: DOCKER_SERVICE_NAME, image_url: "#{image_url}:latest")
-puts "Running dry run command: #{dry_run.command}"
-example_count = dry_run.expected_count
-puts "Expected test count: #{example_count}"
+  puts 'Running pre.sh...'
+  system('chmod +x .saturnci/pre.sh')
+  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} ./.saturnci/pre.sh 2>&1")
 
-test_suite_run_id = task_info['test_suite_run_id']
-puts "Setting dry_run_example_count to #{example_count} for test_suite_run #{test_suite_run_id}..."
-SaturnCIWorkerAPI::Request.new(
-  host: ENV.fetch('SATURNCI_API_HOST'),
-  method: :patch,
-  endpoint: "test_suite_runs/#{test_suite_run_id}",
-  body: { dry_run_example_count: example_count }.to_json
-).execute
+  puts 'Running dry run...'
+  dry_run = DryRun.new(docker_service_name: DOCKER_SERVICE_NAME, image_url: "#{image_url}:latest")
+  puts "Running dry run command: #{dry_run.command}"
+  example_count = dry_run.expected_count
+  puts "Expected test count: #{example_count}"
 
-puts 'Running tests...'
-test_output_file = '/repository/tmp/test_output.txt'
-FileUtils.mkdir_p(File.dirname(test_output_file))
-File.write(test_output_file, '')
+  test_suite_run_id = task_info['test_suite_run_id']
+  puts "Setting dry_run_example_count to #{example_count} for test_suite_run #{test_suite_run_id}..."
+  SaturnCIWorkerAPI::Request.new(
+    host: ENV.fetch('SATURNCI_API_HOST'),
+    method: :patch,
+    endpoint: "test_suite_runs/#{test_suite_run_id}",
+    body: { dry_run_example_count: example_count }.to_json
+  ).execute
 
-test_output_stream = SaturnCIWorkerAPI::Stream.new(
-  test_output_file,
-  "tasks/#{ENV.fetch('TASK_ID')}/test_output",
-  wait_interval: 1
-)
-test_output_stream.start
+  puts 'Running tests...'
+  test_output_file = '/repository/tmp/test_output.txt'
+  FileUtils.mkdir_p(File.dirname(test_output_file))
+  File.write(test_output_file, '')
 
-system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec --format documentation --format documentation --out tmp/test_output.txt --force-color 2>&1")
-rspec_exit_code = $CHILD_STATUS.exitstatus
+  test_output_stream = SaturnCIWorkerAPI::Stream.new(
+    test_output_file,
+    "tasks/#{ENV.fetch('TASK_ID')}/test_output",
+    wait_interval: 1
+  )
+  test_output_stream.start
 
-sleep 2
-test_output_stream.kill
+  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec --format documentation --format documentation --out tmp/test_output.txt --force-color 2>&1")
+  rspec_exit_code = $CHILD_STATUS.exitstatus
 
-puts "COMMAND_EXIT_CODE=#{rspec_exit_code}"
+  sleep 2
+  test_output_stream.kill
 
-puts 'Run finished.'
-executor.finish
-executor.kill_stream
+  puts "COMMAND_EXIT_CODE=#{rspec_exit_code}"
+
+  puts 'Run finished.'
+  executor.finish
+rescue StandardError => e
+  puts "ERROR: #{e.class}: #{e.message}"
+  puts e.backtrace.join("\n")
+  executor.finish
+ensure
+  executor.kill_stream
+end
