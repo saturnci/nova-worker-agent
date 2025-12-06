@@ -1,8 +1,10 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require 'fileutils'
 require_relative '../../lib/executor'
 require_relative '../../lib/saturn_ci_worker_api/request'
+require_relative '../../lib/saturn_ci_worker_api/stream'
 
 DOCKER_SERVICE_NAME = 'saturn_test_app'
 
@@ -28,7 +30,21 @@ system('chmod +x .saturnci/pre.sh')
 system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} ./.saturnci/pre.sh 2>&1")
 
 puts 'Running tests...'
-system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec 2>&1")
+test_output_file = '/repository/tmp/test_output.txt'
+FileUtils.mkdir_p(File.dirname(test_output_file))
+File.write(test_output_file, '')
+
+test_output_stream = SaturnCIWorkerAPI::Stream.new(
+  test_output_file,
+  "tasks/#{ENV.fetch('TASK_ID')}/test_output",
+  wait_interval: 1
+)
+test_output_stream.start
+
+system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec --format documentation --out tmp/test_output.txt 2>&1")
+
+sleep 2
+test_output_stream.kill
 
 test_suite_run_id = task_info['test_suite_run_id']
 puts "Setting dry_run_example_count to 0 for test_suite_run #{test_suite_run_id}..."
