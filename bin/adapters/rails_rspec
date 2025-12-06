@@ -23,8 +23,9 @@ image_url = "registrycache.saturnci.com:5000/#{task_info['project_name']&.downca
 puts 'Pulling image from registry...'
 system("docker pull #{image_url}:latest 2>&1")
 
-puts 'Checking container working directory...'
-system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} ls -la 2>&1")
+puts 'Running pre.sh...'
+system('chmod +x .saturnci/pre.sh')
+system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} ./.saturnci/pre.sh 2>&1")
 
 puts 'Running tests...'
 system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec 2>&1")
