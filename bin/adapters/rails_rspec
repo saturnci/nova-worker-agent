@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require 'English'
 require 'fileutils'
 require_relative '../../lib/executor'
 require_relative '../../lib/saturn_ci_worker_api/request'
@@ -42,9 +43,12 @@ test_output_stream = SaturnCIWorkerAPI::Stream.new(
 test_output_stream.start
 
 system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec --format documentation --format documentation --out tmp/test_output.txt --force-color 2>&1")
+rspec_exit_code = $CHILD_STATUS.exitstatus
 
 sleep 2
 test_output_stream.kill
+
+puts "COMMAND_EXIT_CODE=#{rspec_exit_code}"
 
 test_suite_run_id = task_info['test_suite_run_id']
 puts "Setting dry_run_example_count to 0 for test_suite_run #{test_suite_run_id}..."
