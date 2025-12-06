@@ -9,9 +9,9 @@ class DryRun
 
   def command
     "SATURN_TEST_APP_IMAGE_URL=#{@image_url} \\\n" \
-      'docker-compose -f .saturnci/docker-compose.yml \\\n' \
+      "docker-compose -f .saturnci/docker-compose.yml \\\n" \
       "run -T #{@docker_service_name} \\\n" \
-      'bundle exec rspec --dry-run'
+      "bundle exec rspec --dry-run"
   end
 
   def expected_count

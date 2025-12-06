@@ -7,6 +7,7 @@ require_relative '../../lib/executor'
 require_relative '../../lib/dry_run'
 require_relative '../../lib/saturn_ci_worker_api/request'
 require_relative '../../lib/saturn_ci_worker_api/stream'
+require_relative '../../lib/saturn_ci_worker_api/file_content_request'
 
 DOCKER_SERVICE_NAME = 'saturn_test_app'
 
@@ -60,13 +61,24 @@ begin
   )
   test_output_stream.start
 
-  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec --format documentation --format documentation --out tmp/test_output.txt --force-color 2>&1")
+  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec --format documentation --format documentation --out tmp/test_output.txt --format json --out tmp/json_output.json --force-color 2>&1")
   rspec_exit_code = $CHILD_STATUS.exitstatus
 
   sleep 2
   test_output_stream.kill
 
   puts "COMMAND_EXIT_CODE=#{rspec_exit_code}"
+
+  puts 'Sending JSON output...'
+  json_output_request = SaturnCIWorkerAPI::FileContentRequest.new(
+    host: ENV.fetch('SATURNCI_API_HOST'),
+    api_path: "tasks/#{ENV.fetch('TASK_ID')}/json_output",
+    content_type: 'application/json',
+    file_path: '/repository/tmp/json_output.json'
+  )
+  response = json_output_request.execute
+  puts "JSON output response code: #{response.code}"
+  puts response.body
 
   puts 'Run finished.'
   executor.finish
