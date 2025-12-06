@@ -64,6 +64,7 @@ begin
   system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec --format documentation --format documentation --out tmp/test_output.txt --format json --out tmp/json_output.json --force-color 2>&1")
   rspec_exit_code = $CHILD_STATUS.exitstatus
 
+  File.open(test_output_file, 'a') { |f| f.puts "COMMAND_EXIT_CODE=#{rspec_exit_code}" }
   sleep 2
   test_output_stream.kill
 
@@ -88,6 +89,4 @@ rescue StandardError => e
   executor.finish
 ensure
   executor.kill_stream
-  puts 'Stopping docker daemon...'
-  system('pkill -f dockerd')
 end
