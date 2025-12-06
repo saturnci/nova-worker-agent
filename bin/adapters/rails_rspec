@@ -65,10 +65,10 @@ begin
   test_suite_command = SaturnCIWorkerAPI::TestSuiteCommand.new(
     docker_service_name: DOCKER_SERVICE_NAME,
     docker_registry_cache_image_url: "#{image_url}:latest",
-    number_of_concurrent_runs: task_info["number_of_concurrent_runs"],
-    run_order_index: task_info["run_order_index"],
-    rspec_seed: task_info["rspec_seed"],
-    rspec_documentation_output_filename: "tmp/test_output.txt"
+    number_of_concurrent_runs: task_info['number_of_concurrent_runs'],
+    run_order_index: task_info['run_order_index'],
+    rspec_seed: task_info['rspec_seed'],
+    rspec_documentation_output_filename: 'tmp/test_output.txt'
   )
 
   puts "Running command: #{test_suite_command.docker_compose_command}"
