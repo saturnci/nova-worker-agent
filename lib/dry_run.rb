@@ -7,7 +7,7 @@ class DryRun
   end
 
   def command
-    "docker compose -f .saturnci/docker-compose.yml run --no-TTY #{@docker_service_name} bundle exec rspec --dry-run"
+    "docker-compose -f .saturnci/docker-compose.yml run --no-TTY #{@docker_service_name} bundle exec rspec --dry-run"
   end
 
   def expected_count
