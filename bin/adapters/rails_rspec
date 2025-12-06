@@ -88,4 +88,6 @@ rescue StandardError => e
   executor.finish
 ensure
   executor.kill_stream
+  puts 'Stopping docker daemon...'
+  system('pkill -f dockerd')
 end
