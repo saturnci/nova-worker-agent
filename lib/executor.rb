@@ -104,20 +104,23 @@ class Executor
   end
 
   def wait_for_docker(timeout: 60)
-    puts 'Waiting for Docker daemon...'
+    print 'Waiting for Docker daemon'
     start_time = Time.now
 
     loop do
       if system('docker info > /dev/null 2>&1')
+        puts
         puts 'Docker daemon is ready.'
         return true
       end
 
       if Time.now - start_time > timeout
+        puts
         puts "Timed out waiting for Docker daemon after #{timeout} seconds."
         return false
       end
 
+      print '.'
       sleep 1
     end
   end
