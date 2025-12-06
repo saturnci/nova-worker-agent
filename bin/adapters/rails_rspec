@@ -50,13 +50,16 @@ test_output_stream.kill
 
 puts "COMMAND_EXIT_CODE=#{rspec_exit_code}"
 
+test_output = File.read(test_output_file)
+example_count = test_output.match(/(\d+) examples?/)&.captures&.first&.to_i || 0
+
 test_suite_run_id = task_info['test_suite_run_id']
-puts "Setting dry_run_example_count to 0 for test_suite_run #{test_suite_run_id}..."
+puts "Setting dry_run_example_count to #{example_count} for test_suite_run #{test_suite_run_id}..."
 SaturnCIWorkerAPI::Request.new(
   host: ENV.fetch('SATURNCI_API_HOST'),
   method: :patch,
   endpoint: "test_suite_runs/#{test_suite_run_id}",
-  body: { dry_run_example_count: 0 }.to_json
+  body: { dry_run_example_count: example_count }.to_json
 ).execute
 
 puts 'Run finished.'
