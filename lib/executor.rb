@@ -78,4 +78,23 @@ class Executor
     sleep 2
     @stream.kill
   end
+
+  def wait_for_docker(timeout: 60)
+    puts 'Waiting for Docker daemon...'
+    start_time = Time.now
+
+    loop do
+      if system('docker info > /dev/null 2>&1')
+        puts 'Docker daemon is ready.'
+        return true
+      end
+
+      if Time.now - start_time > timeout
+        puts "Timed out waiting for Docker daemon after #{timeout} seconds."
+        return false
+      end
+
+      sleep 1
+    end
+  end
 end

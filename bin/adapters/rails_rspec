@@ -8,6 +8,7 @@ executor.start_stream
 puts 'Adapter: Ruby on Rails/Rspec'
 
 executor.clone_repo
+executor.wait_for_docker
 
 puts 'Running docker-compose build...'
 system('docker-compose build 2>&1')
