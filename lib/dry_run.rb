@@ -2,12 +2,13 @@
 
 require 'English'
 class DryRun
-  def initialize(docker_service_name:)
+  def initialize(docker_service_name:, image_url:)
     @docker_service_name = docker_service_name
+    @image_url = image_url
   end
 
   def command
-    "docker-compose -f .saturnci/docker-compose.yml run --no-TTY #{@docker_service_name} bundle exec rspec --dry-run"
+    "SATURN_TEST_APP_IMAGE_URL=#{@image_url} docker-compose -f .saturnci/docker-compose.yml run --no-TTY #{@docker_service_name} bundle exec rspec --dry-run"
   end
 
   def expected_count
