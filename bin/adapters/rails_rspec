@@ -11,7 +11,7 @@ executor.clone_repo
 executor.wait_for_docker
 
 puts 'Running docker-compose build...'
-system('docker-compose build 2>&1')
+system('docker-compose -f .saturnci/docker-compose.yml build 2>&1')
 
 puts 'Run finished.'
 executor.kill_stream
