@@ -93,6 +93,16 @@ class Executor
     @stream.kill
   end
 
+  def finish
+    puts 'Sending task finished event...'
+    response = SaturnCIWorkerAPI::Request.new(
+      host: @host,
+      method: :post,
+      endpoint: "tasks/#{@task_id}/task_finished_events"
+    ).execute
+    puts "Task finished response code: #{response.code}"
+  end
+
   def wait_for_docker(timeout: 60)
     puts 'Waiting for Docker daemon...'
     start_time = Time.now

@@ -18,4 +18,5 @@ unless executor.build_with_cache
 end
 
 puts 'Run finished.'
+executor.finish
 executor.kill_stream
