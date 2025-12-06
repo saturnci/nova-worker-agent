@@ -32,7 +32,8 @@ system('chmod +x .saturnci/pre.sh')
 system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} ./.saturnci/pre.sh 2>&1")
 
 puts 'Running dry run...'
-dry_run = DryRun.new(docker_service_name: DOCKER_SERVICE_NAME, image_url: "#{image_url}:latest")
+ENV['SATURN_TEST_APP_IMAGE_URL'] = "#{image_url}:latest"
+dry_run = DryRun.new(docker_service_name: DOCKER_SERVICE_NAME)
 puts "Running dry run command: #{dry_run.command}"
 example_count = dry_run.expected_count
 puts "Expected test count: #{example_count}"
