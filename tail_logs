@@ -1,0 +1,4 @@
+#!/bin/bash
+CONTEXT="do-nyc2-saturnci-workers-cluster"
+echo "Tailing $1..."
+kubectl --context $CONTEXT logs -f $1 -c worker
