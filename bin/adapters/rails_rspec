@@ -21,7 +21,7 @@ task_info = executor.task_info
 image_url = "registrycache.saturnci.com:5000/#{task_info['project_name']&.downcase}/#{task_info['branch_name']&.downcase}"
 
 puts 'Running tests...'
-system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec 2>&1")
+system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec 2>&1")
 
 test_suite_run_id = task_info['test_suite_run_id']
 puts "Setting dry_run_example_count to 0 for test_suite_run #{test_suite_run_id}..."
