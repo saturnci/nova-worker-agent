@@ -28,7 +28,7 @@ puts 'Pulling image from registry...'
 system("docker pull #{image_url}:latest 2>&1")
 
 puts 'Writing SATURN_TEST_APP_IMAGE_URL to .env file...'
-File.open('/repository/.saturnci/.env', 'a') { |f| f.puts "SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest" }
+File.open('/repository/.env', 'w') { |f| f.puts "SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest" }
 
 puts 'Running pre.sh...'
 system('chmod +x .saturnci/pre.sh')
