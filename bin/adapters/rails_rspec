@@ -8,6 +8,7 @@ require_relative '../../lib/dry_run'
 require_relative '../../lib/saturn_ci_worker_api/request'
 require_relative '../../lib/saturn_ci_worker_api/stream'
 require_relative '../../lib/saturn_ci_worker_api/file_content_request'
+require_relative '../../lib/saturn_ci_worker_api/test_suite_command'
 
 DOCKER_SERVICE_NAME = 'saturn_test_app'
 
@@ -61,7 +62,17 @@ begin
   )
   test_output_stream.start
 
-  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec --format documentation --format documentation --out tmp/test_output.txt --format json --out tmp/json_output.json --force-color 2>&1")
+  test_suite_command = SaturnCIWorkerAPI::TestSuiteCommand.new(
+    docker_service_name: DOCKER_SERVICE_NAME,
+    docker_registry_cache_image_url: "#{image_url}:latest",
+    number_of_concurrent_runs: task_info["number_of_concurrent_runs"],
+    run_order_index: task_info["run_order_index"],
+    rspec_seed: task_info["rspec_seed"],
+    rspec_documentation_output_filename: "tmp/test_output.txt"
+  )
+
+  puts "Running command: #{test_suite_command.docker_compose_command}"
+  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest #{test_suite_command.docker_compose_command} 2>&1")
   rspec_exit_code = $CHILD_STATUS.exitstatus
 
   sleep 2

@@ -14,12 +14,8 @@ module SaturnCIWorkerAPI
       @rspec_documentation_output_filename = rspec_documentation_output_filename
     end
 
-    def to_s
-      "script -f #{@rspec_documentation_output_filename} -c \"sudo SATURN_TEST_APP_IMAGE_URL=#{@docker_registry_cache_image_url} #{docker_compose_command.strip}\""
-    end
-
     def docker_compose_command
-      "docker compose -f .saturnci/docker-compose.yml run #{@docker_service_name} #{rspec_command}"
+      "docker-compose -f .saturnci/docker-compose.yml run #{@docker_service_name} #{rspec_command}"
     end
 
     def test_filenames_string(test_filenames)
@@ -46,9 +42,10 @@ module SaturnCIWorkerAPI
     def rspec_command
       [
         'bundle exec rspec',
-        '--require ./example_status_persistence.rb',
-        '--format=documentation',
+        '--format documentation',
+        "--format documentation --out #{@rspec_documentation_output_filename}",
         '--format json --out tmp/json_output.json',
+        '--force-color',
         "--order rand:#{@rspec_seed}",
         test_filenames_string(test_filenames)
       ].join(' ')
