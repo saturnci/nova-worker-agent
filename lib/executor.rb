@@ -74,6 +74,19 @@ class Executor
     system('ls -la 2>&1')
   end
 
+  def write_env_file
+    env_file_path = File.join(PROJECT_DIR, '.saturnci/.env')
+    puts "Writing env vars to #{env_file_path}..."
+
+    File.open(env_file_path, 'w') do |file|
+      @task_info['env_vars'].each do |key, value|
+        file.puts "#{key}=#{value}"
+      end
+    end
+
+    puts 'Env file written successfully.'
+  end
+
   def kill_stream
     sleep 2
     @stream.kill
