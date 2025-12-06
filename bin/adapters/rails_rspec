@@ -27,16 +27,12 @@ image_url = "registrycache.saturnci.com:5000/#{task_info['project_name']&.downca
 puts 'Pulling image from registry...'
 system("docker pull #{image_url}:latest 2>&1")
 
-puts 'Writing SATURN_TEST_APP_IMAGE_URL to .env file...'
-File.open('/repository/.env', 'w') { |f| f.puts "SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest" }
-
 puts 'Running pre.sh...'
 system('chmod +x .saturnci/pre.sh')
 system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} ./.saturnci/pre.sh 2>&1")
 
 puts 'Running dry run...'
-ENV['SATURN_TEST_APP_IMAGE_URL'] = "#{image_url}:latest"
-dry_run = DryRun.new(docker_service_name: DOCKER_SERVICE_NAME)
+dry_run = DryRun.new(docker_service_name: DOCKER_SERVICE_NAME, image_url: "#{image_url}:latest")
 puts "Running dry run command: #{dry_run.command}"
 example_count = dry_run.expected_count
 puts "Expected test count: #{example_count}"
