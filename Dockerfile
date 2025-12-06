@@ -7,6 +7,12 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Docker Buildx plugin
+RUN mkdir -p /root/.docker/cli-plugins && \
+    curl -SL https://github.com/docker/buildx/releases/download/v0.12.1/buildx-v0.12.1.linux-amd64 \
+    -o /root/.docker/cli-plugins/docker-buildx && \
+    chmod +x /root/.docker/cli-plugins/docker-buildx
+
 WORKDIR /nova_worker_agent
 
 COPY Gemfile Gemfile.lock ./
