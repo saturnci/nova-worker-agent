@@ -13,10 +13,7 @@ executor.write_env_file
 executor.wait_for_docker
 
 puts 'Building with cache...'
-unless executor.build_with_cache
-  puts 'Falling back to docker-compose build...'
-  system('docker-compose -f .saturnci/docker-compose.yml build 2>&1')
-end
+executor.build_with_cache
 
 puts 'Run finished.'
 
