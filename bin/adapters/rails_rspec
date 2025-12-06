@@ -4,6 +4,8 @@
 require_relative '../../lib/executor'
 require_relative '../../lib/saturn_ci_worker_api/request'
 
+DOCKER_SERVICE_NAME = 'saturn_test_app'
+
 executor = Executor.new
 executor.start_stream
 puts 'Adapter: Ruby on Rails/Rspec'
@@ -15,17 +17,21 @@ executor.wait_for_docker
 puts 'Building with cache...'
 executor.build_with_cache
 
-puts 'Run finished.'
+task_info = executor.task_info
+image_url = "registrycache.saturnci.com:5000/#{task_info['project_name']&.downcase}/#{task_info['branch_name']&.downcase}"
 
-test_suite_run_id = executor.task_info['test_suite_run_id']
+puts 'Running tests...'
+system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec 2>&1")
+
+test_suite_run_id = task_info['test_suite_run_id']
 puts "Setting dry_run_example_count to 0 for test_suite_run #{test_suite_run_id}..."
-response = SaturnCIWorkerAPI::Request.new(
+SaturnCIWorkerAPI::Request.new(
   host: ENV.fetch('SATURNCI_API_HOST'),
   method: :patch,
   endpoint: "test_suite_runs/#{test_suite_run_id}",
   body: { dry_run_example_count: 0 }.to_json
 ).execute
-puts "dry_run_example_count response code: #{response.code}"
 
+puts 'Run finished.'
 executor.finish
 executor.kill_stream
