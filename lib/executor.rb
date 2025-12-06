@@ -101,6 +101,7 @@ class Executor
       endpoint: "tasks/#{@task_id}/task_finished_events"
     ).execute
     puts "Task finished response code: #{response.code}"
+    puts "Task finished response body: #{response.body}" unless response.body.to_s.empty?
   end
 
   def wait_for_docker(timeout: 60)
