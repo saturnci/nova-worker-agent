@@ -155,6 +155,8 @@ class Executor
     ].join(' ')
 
     puts "Build command: #{build_command}"
-    system(build_command)
+    result = system("#{build_command} 2>&1")
+    puts "Build result: #{result ? 'success' : 'failed'}"
+    result
   end
 end
