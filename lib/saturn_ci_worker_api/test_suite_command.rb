@@ -42,6 +42,7 @@ module SaturnCIWorkerAPI
     def rspec_command
       [
         'bundle exec rspec',
+        '--require ./.saturnci/rspec_retry.rb',
         '--format documentation',
         "--format documentation --out #{@rspec_documentation_output_filename}",
         '--format json --out tmp/json_output.json',
