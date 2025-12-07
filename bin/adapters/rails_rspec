@@ -20,6 +20,10 @@ begin
 
   executor.clone_repo
   executor.write_env_file
+
+  puts 'Copying database.yml...'
+  FileUtils.cp('.saturnci/database.yml', 'config/database.yml')
+
   executor.wait_for_docker
 
   puts 'Building with cache...'
