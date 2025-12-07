@@ -3,7 +3,9 @@
 
 require 'English'
 require 'fileutils'
+require 'json'
 require_relative '../../lib/executor'
+require_relative '../../lib/test_suite_result'
 require_relative '../../lib/dry_run'
 require_relative '../../lib/saturn_ci_worker_api/request'
 require_relative '../../lib/saturn_ci_worker_api/stream'
@@ -20,6 +22,14 @@ begin
 
   executor.clone_repo
   executor.write_env_file
+
+  puts 'Writing RSpec persistence config...'
+  persistence_config = <<~RUBY
+    RSpec.configure do |config|
+      config.example_status_persistence_file_path = 'tmp/rspec_status.txt'
+    end
+  RUBY
+  File.write('.saturnci/rspec_persistence.rb', persistence_config)
 
   puts 'Copying database.yml...'
   FileUtils.cp('.saturnci/database.yml', 'config/database.yml')
@@ -76,9 +86,31 @@ begin
     rspec_documentation_output_filename: 'tmp/test_output.txt'
   )
 
+  json_output_path = '/repository/tmp/json_output.json'
+
   puts "Running command: #{test_suite_command.docker_compose_command}"
   system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest #{test_suite_command.docker_compose_command} 2>&1")
   rspec_exit_code = $CHILD_STATUS.exitstatus
+
+  max_retry_passes = 5
+  retry_pass = 0
+
+  while rspec_exit_code != 0 && retry_pass < max_retry_passes
+    retry_pass += 1
+    puts "Retry pass #{retry_pass}/#{max_retry_passes}: re-running failed tests..."
+
+    original_result = TestSuiteResult.new(JSON.parse(File.read(json_output_path)))
+
+    puts "Running retry command: #{test_suite_command.retry_docker_compose_command}"
+    system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest #{test_suite_command.retry_docker_compose_command} 2>&1")
+    rspec_exit_code = $CHILD_STATUS.exitstatus
+
+    retry_result = TestSuiteResult.new(JSON.parse(File.read(json_output_path)))
+    merged_result = original_result.merged_with(retry_result)
+    File.write(json_output_path, merged_result.to_json)
+
+    puts "Merged results: #{merged_result.example_count} examples, #{merged_result.failure_count} failures"
+  end
 
   sleep 2
   test_output_stream.kill
@@ -90,7 +122,7 @@ begin
     host: ENV.fetch('SATURNCI_API_HOST'),
     api_path: "tasks/#{ENV.fetch('TASK_ID')}/json_output",
     content_type: 'application/json',
-    file_path: '/repository/tmp/json_output.json'
+    file_path: json_output_path
   )
   response = json_output_request.execute
   puts "JSON output response code: #{response.code}"

@@ -18,6 +18,10 @@ module SaturnCIWorkerAPI
       "docker-compose -f .saturnci/docker-compose.yml run #{@docker_service_name} #{rspec_command}"
     end
 
+    def retry_docker_compose_command
+      "docker-compose -f .saturnci/docker-compose.yml run #{@docker_service_name} #{retry_rspec_command}"
+    end
+
     def test_filenames_string(test_filenames)
       raise StandardError, "No test files found matching #{TEST_FILE_GLOB}" if test_filenames.empty?
 
@@ -42,12 +46,26 @@ module SaturnCIWorkerAPI
     def rspec_command
       [
         'bundle exec rspec',
+        '--require ./.saturnci/rspec_persistence.rb',
         '--format documentation',
         "--format documentation --out #{@rspec_documentation_output_filename}",
         '--format json --out tmp/json_output.json',
         '--force-color',
         "--order rand:#{@rspec_seed}",
         test_filenames_string(test_filenames)
+      ].join(' ')
+    end
+
+    def retry_rspec_command
+      [
+        'bundle exec rspec',
+        '--only-failures',
+        '--require ./.saturnci/rspec_persistence.rb',
+        '--format documentation',
+        "--format documentation --out #{@rspec_documentation_output_filename}",
+        '--format json --out tmp/json_output.json',
+        '--force-color',
+        "--order rand:#{@rspec_seed}"
       ].join(' ')
     end
 

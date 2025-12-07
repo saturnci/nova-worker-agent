@@ -21,7 +21,10 @@ module SaturnCIWorkerAPI
 
         loop do
           all_lines = log_file_content
-          newest_content = all_lines[most_recent_total_line_count..].join("\n")
+
+          most_recent_total_line_count = 0 if all_lines.count < most_recent_total_line_count
+
+          newest_content = (all_lines[most_recent_total_line_count..] || []).join("\n")
 
           if newest_content.length.positive?
             send_content(newest_content)
