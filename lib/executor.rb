@@ -126,6 +126,22 @@ class Executor
     end
   end
 
+  def authenticate_to_registry_cache
+    registry_cache = SaturnCIWorkerAPI::DockerRegistryCache.new(
+      username: @task_info['docker_registry_cache_username'],
+      password: @task_info['docker_registry_cache_password'],
+      project_name: @task_info['project_name']&.downcase,
+      branch_name: @task_info['branch_name']&.downcase
+    )
+
+    puts 'Authenticating to Docker registry cache...'
+    unless registry_cache.authenticate
+      puts 'Warning: Docker registry cache authentication failed'
+      return false
+    end
+    true
+  end
+
   def build_with_cache
     registry_cache = SaturnCIWorkerAPI::DockerRegistryCache.new(
       username: @task_info['docker_registry_cache_username'],

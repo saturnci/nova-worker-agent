@@ -25,6 +25,7 @@ begin
   FileUtils.cp('.saturnci/database.yml', 'config/database.yml')
 
   executor.wait_for_docker
+  executor.authenticate_to_registry_cache
 
   puts 'Building with cache...'
   executor.build_with_cache
