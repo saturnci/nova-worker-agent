@@ -112,6 +112,8 @@ class Executor
       if system('docker info > /dev/null 2>&1')
         puts
         puts 'Docker daemon is ready.'
+        puts 'Docker info (registry mirrors):'
+        system('docker info 2>/dev/null | grep -A5 "Registry Mirrors" || echo "No registry mirrors configured"')
         return true
       end
 
