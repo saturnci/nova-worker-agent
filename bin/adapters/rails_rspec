@@ -96,7 +96,7 @@ begin
   puts "JSON output response code: #{response.code}"
   puts response.body
 
-  puts 'Run finished.'
+  puts 'Task finished.'
   executor.finish
 rescue StandardError => e
   puts "ERROR: #{e.class}: #{e.message}"
