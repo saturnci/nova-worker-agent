@@ -4,6 +4,7 @@
 require 'English'
 require 'fileutils'
 require_relative '../../lib/executor'
+require_relative '../../lib/dry_run'
 require_relative '../../lib/saturn_ci_worker_api/request'
 require_relative '../../lib/saturn_ci_worker_api/stream'
 require_relative '../../lib/saturn_ci_worker_api/file_content_request'
@@ -37,6 +38,21 @@ begin
   puts 'Running pre.sh...'
   system('chmod +x .saturnci/pre.sh')
   system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} ./.saturnci/pre.sh 2>&1")
+
+  puts 'Running dry run...'
+  dry_run = DryRun.new(docker_service_name: DOCKER_SERVICE_NAME, image_url: "#{image_url}:latest")
+  puts "Running dry run command: #{dry_run.command}"
+  example_count = dry_run.expected_count
+  puts "Expected test count: #{example_count}"
+
+  test_suite_run_id = task_info['test_suite_run_id']
+  puts "Setting dry_run_example_count to #{example_count} for test_suite_run #{test_suite_run_id}..."
+  SaturnCIWorkerAPI::Request.new(
+    host: ENV.fetch('SATURNCI_API_HOST'),
+    method: :patch,
+    endpoint: "test_suite_runs/#{test_suite_run_id}",
+    body: { dry_run_example_count: example_count }.to_json
+  ).execute
 
   puts 'Running tests...'
   test_output_file = '/repository/tmp/test_output.txt'
