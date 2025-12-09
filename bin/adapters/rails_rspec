@@ -67,17 +67,29 @@ begin
   )
   test_output_stream.start
 
-  test_suite_command = SaturnCIWorkerAPI::TestSuiteCommand.new(
-    docker_service_name: DOCKER_SERVICE_NAME,
-    docker_registry_cache_image_url: "#{image_url}:latest",
-    number_of_concurrent_runs: task_info['number_of_concurrent_runs'],
-    run_order_index: task_info['run_order_index'],
-    rspec_seed: task_info['rspec_seed'],
-    rspec_documentation_output_filename: 'tmp/test_output.txt'
-  )
+  puts 'Getting test case instructions from server...'
+  grouped_test_response = SaturnCIWorkerAPI::Request.new(
+    host: ENV.fetch('SATURNCI_API_HOST'),
+    method: :post,
+    endpoint: "test_suite_runs/#{test_suite_run_id}/targeted_test_cases",
+    body: { test_files: Dir.glob('./spec/**/*_spec.rb') }.to_json
+  ).execute
 
-  puts "Running command: #{test_suite_command.docker_compose_command}"
-  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest #{test_suite_command.docker_compose_command} 2>&1")
+  grouped_tests = JSON.parse(grouped_test_response.body)
+
+  rspec_command = [
+    'bundle exec rspec',
+    '--format documentation',
+    '--format documentation --out tmp/test_output.txt',
+    '--format json --out tmp/json_output.json',
+    '--force-color',
+    "--order rand:#{task_info['rspec_seed']}",
+    grouped_tests[task_info['run_order_index'].to_s].join(' ')
+  ].join(' ')
+
+  docker_command = "docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} #{rspec_command}"
+  puts "Running command: #{docker_command}"
+  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest #{docker_command} 2>&1")
   rspec_exit_code = $CHILD_STATUS.exitstatus
 
   sleep 2
