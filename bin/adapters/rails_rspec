@@ -69,7 +69,7 @@ begin
   puts 'Getting test case instructions from server...'
   grouped_test_response = SaturnCIWorkerAPI::Request.new(
     host: ENV.fetch('SATURNCI_API_HOST'),
-    method: :patch,
+    method: :post,
     endpoint: "test_suite_runs/#{test_suite_run_id}/test_set",
     body: { test_files: Dir.glob('./spec/**/*_spec.rb') }.to_json
   ).execute
