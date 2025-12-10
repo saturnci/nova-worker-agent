@@ -53,14 +53,20 @@ begin
   test_output_stream.start
 
   puts 'Getting test case instructions from server...'
-  grouped_test_response = SaturnCIWorkerAPI::Request.new(
+  test_set_response = SaturnCIWorkerAPI::Request.new(
     host: ENV.fetch('SATURNCI_API_HOST'),
     method: :post,
     endpoint: "test_suite_runs/#{test_suite_run_id}/test_set",
     body: { test_files: Dir.glob('./spec/**/*_spec.rb') }.to_json
   ).execute
 
-  grouped_tests = JSON.parse(grouped_test_response.body)
+  test_set_data = JSON.parse(test_set_response.body)
+  grouped_tests = test_set_data['grouped_tests']
+  dry_run_example_count = test_set_data['dry_run_example_count']
+
+  raise 'dry_run_example_count not set by server' if dry_run_example_count.nil?
+
+  puts "dry_run_example_count: #{dry_run_example_count}"
 
   rspec_command = [
     'bundle exec rspec',
