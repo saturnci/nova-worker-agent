@@ -15,6 +15,18 @@ class Executor
   def initialize
     @host = ENV.fetch('SATURNCI_API_HOST')
     @task_id = ENV.fetch('TASK_ID')
+    @worker_id = ENV.fetch('WORKER_ID')
+  end
+
+  def send_worker_event(name, notes: nil)
+    SaturnCIWorkerAPI::Request.new(
+      host: @host,
+      method: :post,
+      endpoint: "workers/#{@worker_id}/worker_events",
+      body: { type: name, notes: notes }.to_json
+    ).execute
+  rescue StandardError => e
+    puts "Warning: Failed to send worker event '#{name}': #{e.message}"
   end
 
   def start_stream
@@ -38,6 +50,7 @@ class Executor
       endpoint: "tasks/#{@task_id}"
     ).execute
     @task_info = JSON.parse(response.body)
+    send_worker_event('task_fetched')
 
     puts <<~OUTPUT
       Task info received:
@@ -112,6 +125,7 @@ class Executor
       if system('docker info > /dev/null 2>&1')
         puts
         puts 'Docker daemon is ready.'
+        send_worker_event('docker_ready')
         puts 'Docker info (registry mirrors):'
         system('docker info 2>/dev/null | grep -A5 "Registry Mirrors" || echo "No registry mirrors configured"')
         return true
@@ -173,7 +187,9 @@ class Executor
     ].join(' ')
 
     puts "Build command: #{build_command}"
+    send_worker_event('docker_build_started')
     result = system("#{build_command} 2>&1")
+    send_worker_event('docker_build_finished')
     puts "Build result: #{result ? 'success' : 'failed'}"
     result
   end
