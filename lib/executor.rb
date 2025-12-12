@@ -178,7 +178,7 @@ class Executor
     image_url = registry_cache.image_url
     build_command = [
       'docker buildx build',
-      '--push',
+      '--load',
       "-t #{image_url}:latest",
       "--cache-from type=registry,ref=#{image_url}:cache",
       "--cache-to type=registry,ref=#{image_url}:cache,mode=max",
