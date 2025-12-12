@@ -33,8 +33,7 @@ begin
   task_info = executor.task_info
   image_url = "docker-image-registry.saturnci.com:5000/#{task_info['project_name']&.downcase}"
 
-  puts 'Pulling image from registry...'
-  system("docker pull #{image_url}:latest 2>&1")
+  puts 'Image loaded locally by buildx'
 
   puts 'Running pre.sh...'
   system('chmod +x .saturnci/pre.sh')
