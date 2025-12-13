@@ -185,12 +185,14 @@ class Executor
     system('docker buildx create --name saturnci-builder --driver docker-container --config /tmp/buildkitd.toml --use')
 
     image_url = registry_cache.image_url
+    buildx_cache_path = ENV.fetch('BUILDX_CACHE_PATH')
+
     build_command = [
       'docker buildx build',
       '--load',
       "-t #{image_url}:latest",
-      "--cache-from type=registry,ref=#{image_url}:cache",
-      "--cache-to type=registry,ref=#{image_url}:cache,mode=max",
+      "--cache-from type=local,src=#{buildx_cache_path}",
+      "--cache-to type=local,dest=#{buildx_cache_path},mode=max",
       '--progress=plain',
       '-f .saturnci/Dockerfile .'
     ].join(' ')
