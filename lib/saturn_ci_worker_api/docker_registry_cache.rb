@@ -5,7 +5,7 @@ require 'digest'
 
 module SaturnCIWorkerAPI
   class DockerRegistryCache
-    URL = 'docker-image-registry.saturnci.com:5000'
+    URL = 'docker-image-registry-service:5000'
 
     def initialize(username:, password:, project_name:, branch_name:)
       @username = username
