@@ -175,11 +175,9 @@ class Executor
     end
 
     puts 'Creating buildx builder...'
-    system('docker buildx rm saturnci-builder 2>/dev/null')
-    system('docker buildx create --name saturnci-builder --driver docker-container --use')
+    system('docker buildx create --name saturnci-builder --driver docker-container --use 2>/dev/null || docker buildx use saturnci-builder')
 
     image_url = registry_cache.image_url
-
     build_command = [
       'docker buildx build',
       '--load',
@@ -196,21 +194,13 @@ class Executor
     buildx_output, success = capture_and_stream_output("#{build_command} 2>&1")
     build_metrics = BuildxOutputParser.new.parse(buildx_output)
 
-    send_build_metric_events(build_metrics)
-    send_worker_event('docker_build_finished')
+    send_worker_event('docker_build_finished', notes: build_metrics.to_json)
     puts "Build metrics: #{build_metrics}"
 
     success
   end
 
   private
-
-  def send_build_metric_events(metrics)
-    send_worker_event('cache_import_finished', notes: metrics[:cache_import_seconds].to_s) if metrics[:cache_import_seconds]
-    send_worker_event('layer_build_finished', notes: metrics[:build_seconds].to_s) if metrics[:build_seconds]&.positive?
-    send_worker_event('image_export_finished', notes: metrics[:export_image_seconds].to_s) if metrics[:export_image_seconds]
-    send_worker_event('cache_export_finished', notes: metrics[:cache_export_seconds].to_s) if metrics[:cache_export_seconds]
-  end
 
   def capture_and_stream_output(command)
     output = ''
