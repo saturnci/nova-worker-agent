@@ -174,8 +174,15 @@ class Executor
       return false
     end
 
-    puts 'Creating buildx builder...'
-    system('docker buildx create --name saturnci-builder --driver docker-container --use 2>/dev/null || docker buildx use saturnci-builder')
+    puts 'Creating buildx builder with insecure registry config...'
+    buildkitd_config = <<~TOML
+      [registry."docker-image-registry-service:5000"]
+        http = true
+        insecure = true
+    TOML
+    File.write('/tmp/buildkitd.toml', buildkitd_config)
+    system('docker buildx rm saturnci-builder 2>/dev/null')
+    system('docker buildx create --name saturnci-builder --driver docker-container --config /tmp/buildkitd.toml --use')
 
     image_url = registry_cache.image_url
     build_command = [
