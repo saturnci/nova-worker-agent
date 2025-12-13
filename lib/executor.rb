@@ -176,17 +176,16 @@ class Executor
 
     puts 'Creating buildx builder...'
     system('docker buildx rm saturnci-builder 2>/dev/null')
-    system('docker buildx create --name saturnci-builder --driver docker --use')
+    system('docker buildx create --name saturnci-builder --driver docker-container --use')
 
     image_url = registry_cache.image_url
-    buildx_cache_path = ENV.fetch('BUILDX_CACHE_PATH')
 
     build_command = [
       'docker buildx build',
       '--load',
       "-t #{image_url}:latest",
-      "--cache-from type=local,src=#{buildx_cache_path}",
-      "--cache-to type=local,dest=#{buildx_cache_path},mode=max",
+      "--cache-from type=registry,ref=#{image_url}:cache",
+      "--cache-to type=registry,ref=#{image_url}:cache,mode=max",
       '--progress=plain',
       '-f .saturnci/Dockerfile .'
     ].join(' ')
