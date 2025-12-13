@@ -192,6 +192,9 @@ class Executor
     send_worker_event('docker_build_started')
 
     buildx_output, success = capture_and_stream_output("#{build_command} 2>&1")
+
+    raise "Cache import failed: #{buildx_output[/ERROR:.*$/]}" if buildx_output.include?('failed to configure registry cache importer')
+
     build_metrics = BuildxOutputParser.new.parse(buildx_output)
 
     send_worker_event('docker_build_finished', notes: build_metrics.to_json)
