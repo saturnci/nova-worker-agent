@@ -2,9 +2,11 @@
 
 require 'fileutils'
 require 'json'
+require 'open3'
 require_relative 'saturn_ci_worker_api/request'
 require_relative 'saturn_ci_worker_api/stream'
 require_relative 'saturn_ci_worker_api/docker_registry_cache'
+require_relative 'buildx_output_parser'
 
 class Executor
   LOG_PATH = '/tmp/output.log'
@@ -188,9 +190,28 @@ class Executor
 
     puts "Build command: #{build_command}"
     send_worker_event('docker_build_started')
-    result = system("#{build_command} 2>&1")
-    send_worker_event('docker_build_finished')
-    puts "Build result: #{result ? 'success' : 'failed'}"
-    result
+
+    buildx_output, success = capture_and_stream_output("#{build_command} 2>&1")
+    build_metrics = BuildxOutputParser.new.parse(buildx_output)
+
+    send_worker_event('docker_build_finished', notes: build_metrics.to_json)
+    puts "Build metrics: #{build_metrics}"
+
+    success
+  end
+
+  private
+
+  def capture_and_stream_output(command)
+    output = ''
+    status = nil
+    Open3.popen2e(command) do |_stdin, stdout_and_stderr, wait_thr|
+      stdout_and_stderr.each_line do |line|
+        puts line
+        output += line
+      end
+      status = wait_thr.value
+    end
+    [output, status.success?]
   end
 end
