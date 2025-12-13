@@ -204,10 +204,10 @@ class Executor
   private
 
   def send_build_metric_events(metrics)
-    send_worker_event('cache_import_finished', notes: format('%.2f', metrics[:cache_import_seconds])) if metrics[:cache_import_seconds]
-    send_worker_event('layer_build_finished', notes: format('%.2f', metrics[:build_seconds])) if metrics[:build_seconds]&.positive?
-    send_worker_event('image_export_finished', notes: format('%.2f', metrics[:export_image_seconds])) if metrics[:export_image_seconds]
-    send_worker_event('cache_export_finished', notes: format('%.2f', metrics[:cache_export_seconds])) if metrics[:cache_export_seconds]
+    send_worker_event('cache_import_finished', notes: metrics[:cache_import_seconds].to_s) if metrics[:cache_import_seconds]
+    send_worker_event('layer_build_finished', notes: metrics[:build_seconds].to_s) if metrics[:build_seconds]&.positive?
+    send_worker_event('image_export_finished', notes: metrics[:export_image_seconds].to_s) if metrics[:export_image_seconds]
+    send_worker_event('cache_export_finished', notes: metrics[:cache_export_seconds].to_s) if metrics[:cache_export_seconds]
   end
 
   def capture_and_stream_output(command)
