@@ -5,7 +5,7 @@ class BuildxOutputParser
   DONE_PATTERN = /DONE\s+(\d+\.?\d*)s/
   CACHED_PATTERN = /CACHED/
   CACHE_IMPORT_PATTERN = /importing cache manifest from/
-  EXPORT_IMAGE_PATTERN = /exporting to image/
+  EXPORT_IMAGE_PATTERN = /exporting to (docker )?image/
   CACHE_EXPORT_PATTERN = /exporting cache to/
 
   def parse(output)
