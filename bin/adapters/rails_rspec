@@ -19,6 +19,18 @@ begin
 
   executor.clone_repo
   executor.send_worker_event('repo_cloned')
+
+  test_suite_run_id = executor.task_info['test_suite_run_id']
+  SaturnCIWorkerAPI::Request.new(
+    host: ENV.fetch('SATURNCI_API_HOST'),
+    method: :patch,
+    endpoint: "test_suite_runs/#{test_suite_run_id}",
+    body: {
+      dockerfile_content: File.read('.saturnci/Dockerfile'),
+      docker_compose_file_content: File.read('.saturnci/docker-compose.yml')
+    }.to_json
+  ).execute
+
   executor.write_env_file
 
   puts 'Copying database.yml...'
