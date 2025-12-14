@@ -168,6 +168,10 @@ class Executor
       branch_name: @task_info['branch_name']&.downcase
     )
 
+    image_url = registry_cache.image_url
+
+    return true if load_cached_image("#{image_url}:latest")
+
     puts 'Authenticating to Docker registry cache...'
     unless registry_cache.authenticate
       puts 'Warning: Docker registry cache authentication failed, building without cache'
@@ -183,7 +187,6 @@ class Executor
     File.write('/tmp/buildkitd.toml', buildkitd_config)
     system('docker buildx create --name saturnci-builder --driver docker-container --config /tmp/buildkitd.toml --use 2>/dev/null || docker buildx use saturnci-builder')
 
-    image_url = registry_cache.image_url
     build_command = [
       'docker buildx build',
       '--load',
@@ -206,7 +209,48 @@ class Executor
     send_worker_event('docker_build_finished', notes: build_metrics.to_json)
     puts "Build metrics: #{build_metrics}"
 
+    save_image_to_cache("#{image_url}:latest") if success
+
     success
+  end
+
+  def shared_cache_dir
+    "/shared/#{ENV.fetch('REPOSITORY_ID')}"
+  end
+
+  def cached_image_path
+    "#{shared_cache_dir}/image.tar"
+  end
+
+  def load_cached_image(image_url)
+    return false unless File.exist?(cached_image_path)
+
+    puts "Found cached image at #{cached_image_path}"
+    send_worker_event('docker_build_started', notes: { loading_from_cache: true }.to_json)
+
+    puts 'Loading cached image...'
+    start_time = Time.now
+    success = system("docker load < #{cached_image_path}")
+    load_time = (Time.now - start_time).round(1)
+
+    if success
+      puts "Cached image loaded in #{load_time}s"
+      system("docker tag $(docker images -q | head -1) #{image_url}")
+      true
+    else
+      puts 'Failed to load cached image, will rebuild'
+      false
+    end
+  end
+
+  def save_image_to_cache(image_url)
+    puts "Saving image to cache at #{shared_cache_dir}..."
+    FileUtils.mkdir_p(shared_cache_dir)
+
+    start_time = Time.now
+    system("docker save #{image_url} > #{cached_image_path}")
+    save_time = (Time.now - start_time).round(1)
+    puts "Image saved to cache in #{save_time}s"
   end
 
   private
