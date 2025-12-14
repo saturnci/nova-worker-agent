@@ -168,13 +168,6 @@ class Executor
       branch_name: @task_info['branch_name']&.downcase
     )
 
-    image_url = registry_cache.image_url
-
-    if load_cached_image(image_url)
-      send_worker_event('docker_build_finished', notes: { cached_from_shared_storage: true }.to_json)
-      return true
-    end
-
     puts 'Authenticating to Docker registry cache...'
     unless registry_cache.authenticate
       puts 'Warning: Docker registry cache authentication failed, building without cache'
@@ -190,6 +183,7 @@ class Executor
     File.write('/tmp/buildkitd.toml', buildkitd_config)
     system('docker buildx create --name saturnci-builder --driver docker-container --config /tmp/buildkitd.toml --use 2>/dev/null || docker buildx use saturnci-builder')
 
+    image_url = registry_cache.image_url
     build_command = [
       'docker buildx build',
       '--load',
@@ -212,64 +206,7 @@ class Executor
     send_worker_event('docker_build_finished', notes: build_metrics.to_json)
     puts "Build metrics: #{build_metrics}"
 
-    save_image_to_cache(image_url) if success
-
     success
-  end
-
-  def shared_cache_dir
-    repository_id = ENV.fetch('REPOSITORY_ID', nil)
-    commit_hash = ENV.fetch('COMMIT_HASH', nil)
-    return nil unless repository_id && commit_hash
-
-    "/shared/#{repository_id}/#{commit_hash}"
-  end
-
-  def cached_image_path
-    dir = shared_cache_dir
-    return nil unless dir
-
-    "#{dir}/image.tar"
-  end
-
-  def load_cached_image(image_url)
-    path = cached_image_path
-    return false unless path && File.exist?(path)
-
-    puts "Found cached image at #{path}"
-    send_worker_event('docker_build_started', notes: { loading_from_cache: true }.to_json)
-
-    puts 'Loading cached image...'
-    start_time = Time.now
-    success = system("docker load < #{path}")
-    load_time = (Time.now - start_time).round(1)
-
-    if success
-      puts "Cached image loaded in #{load_time}s"
-      system("docker tag $(docker images -q | head -1) #{image_url}:latest")
-      true
-    else
-      puts 'Failed to load cached image, will rebuild'
-      false
-    end
-  end
-
-  def save_image_to_cache(image_url)
-    dir = shared_cache_dir
-    return unless dir
-
-    puts "Saving image to cache at #{dir}..."
-    FileUtils.mkdir_p(dir)
-
-    start_time = Time.now
-    success = system("docker save #{image_url}:latest > #{cached_image_path}")
-    save_time = (Time.now - start_time).round(1)
-
-    if success
-      puts "Image saved to cache in #{save_time}s"
-    else
-      puts 'Warning: Failed to save image to cache'
-    end
   end
 
   private
