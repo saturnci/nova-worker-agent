@@ -51,6 +51,10 @@ begin
   system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
   executor.send_worker_event('database_setup_finished')
 
+  puts 'Precompiling assets...'
+  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
+  executor.send_worker_event('assets_precompiled')
+
   test_suite_run_id = task_info['test_suite_run_id']
 
   puts 'Running dry run to get test case identifiers...'
