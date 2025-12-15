@@ -7,6 +7,7 @@ require_relative 'saturn_ci_worker_api/request'
 require_relative 'saturn_ci_worker_api/stream'
 require_relative 'saturn_ci_worker_api/docker_registry_cache'
 require_relative 'buildx_output_parser'
+require_relative 'executor/docker_compose_configuration'
 
 class Executor
   LOG_PATH = '/tmp/output.log'
@@ -254,8 +255,11 @@ class Executor
 
   def preload_compose_images
     puts 'Preloading compose images...'
-    ensure_vendor_image('postgres:17.2-alpine')
-    ensure_vendor_image('seleniarm/standalone-chromium')
+    docker_compose_content = File.read('.saturnci/docker-compose.yml')
+    config = DockerComposeConfiguration.new(docker_compose_content)
+    config.vendor_images.each do |image_name|
+      ensure_vendor_image(image_name)
+    end
   end
 
   def ensure_vendor_image(image_name)
