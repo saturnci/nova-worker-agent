@@ -230,9 +230,11 @@ class Executor
     send_worker_event('docker_build_started', notes: { loading_from_cache: true }.to_json)
 
     puts 'Loading cached image...'
+    send_worker_event('app_image_load_started')
     start_time = Time.now
     success = system("docker load < #{cached_image_path}")
     load_time = (Time.now - start_time).round(1)
+    send_worker_event('app_image_load_finished', notes: { load_time_seconds: load_time }.to_json)
 
     if success
       puts "Cached image loaded in #{load_time}s"
