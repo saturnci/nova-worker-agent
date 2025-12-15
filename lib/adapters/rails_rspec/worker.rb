@@ -17,26 +17,22 @@ module Adapters
       end
 
       def run
-        @executor.start_stream
+        puts 'Adapter: Ruby on Rails/RSpec'
+        @executor.send_worker_event('worker_started')
 
-        begin
-          puts 'Adapter: Ruby on Rails/RSpec'
-          @executor.send_worker_event('worker_started')
+        setup
+        run_dry_run
+        run_tests
+        send_results
 
-          setup
-          run_dry_run
-          run_tests
-          send_results
-
-          puts 'Task finished.'
-          @executor.finish
-        rescue StandardError => e
-          puts "ERROR: #{e.class}: #{e.message}"
-          puts e.backtrace.join("\n")
-          @executor.finish
-        ensure
-          @executor.kill_stream
-        end
+        puts 'Task finished.'
+        @executor.finish
+      rescue StandardError => e
+        puts "ERROR: #{e.class}: #{e.message}"
+        puts e.backtrace.join("\n")
+        @executor.finish
+      ensure
+        @executor.kill_stream
       end
 
       private
@@ -49,56 +45,22 @@ module Adapters
         task_info['test_suite_run_id']
       end
 
-      def leader?
-        task_info['run_order_index'] == 1
-      end
-
       def setup
-        if leader?
-          leader_setup
-        else
-          follower_setup
-        end
-      end
-
-      def leader_setup
-        puts 'Leader worker: performing full setup'
-
-        @executor.clone_repo
-        @executor.send_worker_event('repo_cloned')
-
-        SaturnCIWorkerAPI::Request.new(
-          host: ENV.fetch('SATURNCI_API_HOST'),
-          method: :patch,
-          endpoint: "test_suite_runs/#{test_suite_run_id}",
-          body: {
-            dockerfile_content: File.read('.saturnci/Dockerfile'),
-            docker_compose_file_content: File.read('.saturnci/docker-compose.yml')
-          }.to_json
-        ).execute
-
-        common_setup
-        setup_database
-        precompile_assets
-      end
-
-      def follower_setup
-        puts "Follower worker (order_index: #{task_info['run_order_index']}): waiting for setup"
-
-        @executor.wait_for_setup_complete
-        @executor.clone_repo
-        @executor.send_worker_event('repo_cloned')
-
-        common_setup
+        clone_and_configure
+        prepare_docker
         setup_database
       end
 
-      def common_setup
+      def clone_and_configure
+        @executor.clone_repo
+        @executor.send_worker_event('repo_cloned')
         @executor.write_env_file
 
         puts 'Copying database.yml...'
         FileUtils.cp('.saturnci/database.yml', 'config/database.yml')
+      end
 
+      def prepare_docker
         @executor.wait_for_docker
         @executor.authenticate_to_registry_cache
         @executor.preload_vendor_images
@@ -114,12 +76,6 @@ module Adapters
         puts 'Setting up database...'
         system("docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
         @executor.send_worker_event('database_setup_finished')
-      end
-
-      def precompile_assets
-        puts 'Precompiling assets...'
-        system("docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
-        @executor.send_worker_event('assets_precompiled')
       end
 
       def run_dry_run

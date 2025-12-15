@@ -2,8 +2,12 @@
 # frozen_string_literal: true
 
 require_relative '../../lib/executor'
-require_relative '../../lib/adapters/rails_rspec/worker'
+require_relative '../../lib/adapters/rails_rspec/leader_worker'
+require_relative '../../lib/adapters/rails_rspec/follower_worker'
 
 executor = Executor.new
-worker = Adapters::RailsRSpec::Worker.new(executor)
+executor.start_stream
+
+worker_class = executor.task_info['run_order_index'] == 1 ? Adapters::RailsRSpec::LeaderWorker : Adapters::RailsRSpec::FollowerWorker
+worker = worker_class.new(executor)
 worker.run
