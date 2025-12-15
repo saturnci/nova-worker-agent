@@ -26,6 +26,7 @@ RSpec.describe Executor do
       before do
         allow(executor).to receive(:cached_image_path).and_return('/shared/repo-123/image.tar')
         allow(File).to receive(:exist?).with('/shared/repo-123/image.tar').and_return(true)
+        allow(File).to receive(:size).with('/shared/repo-123/image.tar').and_return(500_000_000)
         allow(executor).to receive(:system).and_return(true)
         allow(executor).to receive(:puts)
         allow(executor).to receive(:send_worker_event)

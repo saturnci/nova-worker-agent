@@ -226,7 +226,8 @@ class Executor
   def load_cached_image(_image_url)
     return false unless File.exist?(cached_image_path)
 
-    puts "Found cached image at #{cached_image_path}"
+    file_size_mb = (File.size(cached_image_path) / 1024.0 / 1024.0).round(1)
+    puts "Found cached image at #{cached_image_path} (#{file_size_mb} MB)"
     send_worker_event('docker_build_started', notes: { loading_from_cache: true }.to_json)
 
     puts 'Loading cached image...'
