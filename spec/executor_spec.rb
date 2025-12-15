@@ -76,6 +76,46 @@ RSpec.describe Executor do
     end
   end
 
+  describe '#wait_for_setup_complete' do
+    let!(:executor) { Executor.allocate }
+
+    before do
+      executor.instance_variable_set(:@host, 'http://localhost')
+      executor.instance_variable_set(:@task_id, 'task-123')
+      allow(executor).to receive(:puts)
+      allow(executor).to receive(:sleep)
+    end
+
+    context 'when setup is already complete' do
+      before do
+        response = instance_double('Response', body: '{"setup_completed": true}')
+        allow(SaturnCIWorkerAPI::Request).to receive(:new).and_return(
+          instance_double('Request', execute: response)
+        )
+      end
+
+      it 'returns immediately' do
+        expect(executor).not_to receive(:sleep)
+        executor.wait_for_setup_complete
+      end
+    end
+
+    context 'when setup completes after polling' do
+      before do
+        not_complete = instance_double('Response', body: '{"setup_completed": false}')
+        complete = instance_double('Response', body: '{"setup_completed": true}')
+        request = instance_double('Request')
+        allow(SaturnCIWorkerAPI::Request).to receive(:new).and_return(request)
+        allow(request).to receive(:execute).and_return(not_complete, not_complete, complete)
+      end
+
+      it 'polls until setup is complete' do
+        expect(executor).to receive(:sleep).with(2).twice
+        executor.wait_for_setup_complete
+      end
+    end
+  end
+
   describe '#build_with_cache' do
     let!(:executor) { Executor.allocate }
     let!(:registry_cache) { instance_double(SaturnCIWorkerAPI::DockerRegistryCache) }
