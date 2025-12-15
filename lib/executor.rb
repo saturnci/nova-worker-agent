@@ -210,7 +210,11 @@ class Executor
     send_worker_event('docker_build_finished', notes: build_metrics.to_json)
     puts "Build metrics: #{build_metrics}"
 
-    save_image_to_cache("#{image_url}:latest") if success
+    if success
+      save_image_to_cache("#{image_url}:latest")
+      puts 'Tagging as saturnci-local...'
+      system("docker tag #{image_url}:latest saturnci-local")
+    end
 
     success
   end
@@ -223,7 +227,7 @@ class Executor
     "#{shared_cache_dir}/image.tar"
   end
 
-  def load_cached_image(_image_url)
+  def load_cached_image(image_url)
     return false unless File.exist?(cached_image_path)
 
     file_size_mb = (File.size(cached_image_path) / 1024.0 / 1024.0).round(1)
@@ -239,6 +243,8 @@ class Executor
 
     if success
       puts "Cached image loaded in #{load_time}s"
+      puts 'Tagging as saturnci-local...'
+      system("docker tag #{image_url} saturnci-local")
       true
     else
       puts 'Failed to load cached image, will rebuild'

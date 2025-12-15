@@ -44,22 +44,21 @@ begin
   executor.build_with_cache
 
   task_info = executor.task_info
-  image_url = "docker-image-registry-service:5000/#{task_info['project_name']&.downcase}"
 
-  puts 'Image loaded locally by buildx'
+  puts 'Image tagged as saturnci-local'
 
   puts 'Setting up database...'
-  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run --pull=never #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
+  system("docker-compose -f .saturnci/docker-compose.yml run --pull=never #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
   executor.send_worker_event('database_setup_finished')
 
   puts 'Precompiling assets...'
-  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run --pull=never #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
+  system("docker-compose -f .saturnci/docker-compose.yml run --pull=never #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
   executor.send_worker_event('assets_precompiled')
 
   test_suite_run_id = task_info['test_suite_run_id']
 
   puts 'Running dry run to get test case identifiers...'
-  command = "SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest docker-compose -f .saturnci/docker-compose.yml run --pull=never #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec"
+  command = "docker-compose -f .saturnci/docker-compose.yml run --pull=never #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec"
   puts 'Command:'
   puts command
   dry_run_json = `#{command}`
@@ -109,7 +108,7 @@ begin
   docker_command = "docker-compose -f .saturnci/docker-compose.yml run --pull=never #{DOCKER_SERVICE_NAME} #{rspec_command}"
   puts "Running command: #{docker_command}"
   executor.send_worker_event('tests_started')
-  system("SATURN_TEST_APP_IMAGE_URL=#{image_url}:latest #{docker_command} 2>&1")
+  system("#{docker_command} 2>&1")
   rspec_exit_code = $CHILD_STATUS.exitstatus
   executor.send_worker_event('tests_finished')
 
