@@ -8,6 +8,7 @@ require_relative 'saturn_ci_worker_api/stream'
 require_relative 'saturn_ci_worker_api/docker_registry_cache'
 require_relative 'buildx_output_parser'
 require_relative 'executor/docker_compose_configuration'
+require_relative 'cached_docker_image'
 
 class Executor
   LOG_PATH = '/tmp/output.log'
@@ -248,38 +249,28 @@ class Executor
   end
 
   def load_cached_image(image_url)
+    cached_image = CachedDockerImage.new(image_name: image_url, cache_path: cached_image_path)
     return false unless File.exist?(cached_image_path)
 
-    file_size_mb = (File.size(cached_image_path) / 1024.0 / 1024.0).round(1)
-    puts "Found cached image at #{cached_image_path} (#{file_size_mb} MB)"
     send_worker_event('docker_build_started', notes: { loading_from_cache: true }.to_json)
-
-    puts 'Loading cached image...'
     send_worker_event('app_image_load_started')
     start_time = Time.now
-    success = system("docker load < #{cached_image_path}")
+    success = cached_image.load
     load_time = (Time.now - start_time).round(1)
     send_worker_event('app_image_load_finished', notes: { load_time_seconds: load_time }.to_json)
 
     if success
-      puts "Cached image loaded in #{load_time}s"
       puts 'Tagging as saturnci-local...'
       system("docker tag #{image_url} saturnci-local")
       true
     else
-      puts 'Failed to load cached image, will rebuild'
+      puts 'Will rebuild'
       false
     end
   end
 
   def save_image_to_cache(image_url)
-    puts "Saving image to cache at #{shared_cache_dir}..."
-    FileUtils.mkdir_p(shared_cache_dir)
-
-    start_time = Time.now
-    system("docker save #{image_url} > #{cached_image_path}")
-    save_time = (Time.now - start_time).round(1)
-    puts "Image saved to cache in #{save_time}s"
+    CachedDockerImage.new(image_name: image_url, cache_path: cached_image_path).save
   end
 
   def preload_vendor_images
@@ -306,36 +297,11 @@ class Executor
   end
 
   def load_vendor_image(image_name)
-    cache_path = vendor_image_cache_path(image_name)
-    return false unless File.exist?(cache_path)
-
-    file_size_mb = (File.size(cache_path) / 1024.0 / 1024.0).round(1)
-    puts "Found cached vendor image at #{cache_path} (#{file_size_mb} MB)"
-
-    start_time = Time.now
-    success = system("docker load < #{cache_path}")
-    load_time = (Time.now - start_time).round(1)
-
-    if success
-      puts "Loaded #{image_name} in #{load_time}s"
-      puts "Vendor image #{image_name} loaded from cache"
-      true
-    else
-      puts "Failed to load vendor image #{image_name}"
-      false
-    end
+    CachedDockerImage.new(image_name: image_name, cache_path: vendor_image_cache_path(image_name)).load
   end
 
   def save_vendor_image(image_name)
-    cache_path = vendor_image_cache_path(image_name)
-    puts "Saving vendor image #{image_name} to #{cache_path}..."
-    FileUtils.mkdir_p(File.dirname(cache_path))
-
-    start_time = Time.now
-    system("docker save #{image_name} > #{cache_path}")
-    save_time = (Time.now - start_time).round(1)
-    file_size_mb = (File.size(cache_path) / 1024.0 / 1024.0).round(1)
-    puts "Saved #{image_name} in #{save_time}s (#{file_size_mb} MB)"
+    CachedDockerImage.new(image_name: image_name, cache_path: vendor_image_cache_path(image_name)).save
   end
 
   private

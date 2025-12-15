@@ -21,12 +21,16 @@ RSpec.describe Executor do
 
   describe '#load_cached_image' do
     let!(:executor) { Executor.allocate }
+    let!(:cached_image) { instance_double(Executor::CachedDockerImage) }
 
     context 'when cached image exists' do
       before do
         allow(executor).to receive(:cached_image_path).and_return('/shared/repo-123/image.tar')
         allow(File).to receive(:exist?).with('/shared/repo-123/image.tar').and_return(true)
-        allow(File).to receive(:size).with('/shared/repo-123/image.tar').and_return(500_000_000)
+        allow(Executor::CachedDockerImage).to receive(:new)
+          .with(image_name: 'my-image:latest', cache_path: '/shared/repo-123/image.tar')
+          .and_return(cached_image)
+        allow(cached_image).to receive(:load).and_return(true)
         allow(executor).to receive(:system).and_return(true)
         allow(executor).to receive(:puts)
         allow(executor).to receive(:send_worker_event)
@@ -36,8 +40,8 @@ RSpec.describe Executor do
         expect(executor.load_cached_image('my-image:latest')).to be true
       end
 
-      it 'runs docker load' do
-        expect(executor).to receive(:system).with('docker load < /shared/repo-123/image.tar')
+      it 'delegates to CachedDockerImage' do
+        expect(cached_image).to receive(:load)
         executor.load_cached_image('my-image:latest')
       end
     end
@@ -46,6 +50,7 @@ RSpec.describe Executor do
       before do
         allow(executor).to receive(:cached_image_path).and_return('/shared/repo-123/image.tar')
         allow(File).to receive(:exist?).with('/shared/repo-123/image.tar').and_return(false)
+        allow(Executor::CachedDockerImage).to receive(:new).and_return(cached_image)
       end
 
       it 'returns false' do
@@ -56,22 +61,18 @@ RSpec.describe Executor do
 
   describe '#save_image_to_cache' do
     let!(:executor) { Executor.allocate }
+    let!(:cached_image) { instance_double(Executor::CachedDockerImage) }
 
     before do
-      allow(executor).to receive(:shared_cache_dir).and_return('/shared/repo-123')
       allow(executor).to receive(:cached_image_path).and_return('/shared/repo-123/image.tar')
-      allow(FileUtils).to receive(:mkdir_p)
-      allow(executor).to receive(:system).and_return(true)
-      allow(executor).to receive(:puts)
+      allow(Executor::CachedDockerImage).to receive(:new)
+        .with(image_name: 'my-image:latest', cache_path: '/shared/repo-123/image.tar')
+        .and_return(cached_image)
+      allow(cached_image).to receive(:save)
     end
 
-    it 'creates the cache directory' do
-      expect(FileUtils).to receive(:mkdir_p).with('/shared/repo-123')
-      executor.save_image_to_cache('my-image:latest')
-    end
-
-    it 'saves the image' do
-      expect(executor).to receive(:system).with('docker save my-image:latest > /shared/repo-123/image.tar')
+    it 'delegates to CachedDockerImage' do
+      expect(cached_image).to receive(:save)
       executor.save_image_to_cache('my-image:latest')
     end
   end
