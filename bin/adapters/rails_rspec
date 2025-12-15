@@ -73,6 +73,14 @@ begin
 
     executor.wait_for_setup_complete
 
+    executor.clone_repo
+    executor.send_worker_event('repo_cloned')
+
+    executor.write_env_file
+
+    puts 'Copying database.yml...'
+    FileUtils.cp('.saturnci/database.yml', 'config/database.yml')
+
     executor.wait_for_docker
     executor.authenticate_to_registry_cache
     executor.preload_compose_images
