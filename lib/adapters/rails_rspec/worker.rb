@@ -45,12 +45,6 @@ module Adapters
         task_info['test_suite_run_id']
       end
 
-      def setup
-        clone_and_configure
-        prepare_docker
-        setup_database
-      end
-
       def clone_and_configure
         @executor.clone_repo
         @executor.send_worker_event('repo_cloned')
