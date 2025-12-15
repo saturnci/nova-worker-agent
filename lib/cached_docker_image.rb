@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'fileutils'
+require_relative 'benchmarking'
 
 class Executor
   class CachedDockerImage
@@ -14,12 +15,10 @@ class Executor
 
       puts "Found cached image at #{@cache_path} (#{file_size_mb} MB)"
 
-      start_time = Time.now
-      success = system("docker load < #{@cache_path}")
-      load_time = (Time.now - start_time).round(1)
+      success, duration = Benchmarking.duration { system("docker load < #{@cache_path}") }
 
       if success
-        puts "Loaded #{@image_name} in #{load_time}s"
+        puts "Loaded #{@image_name} in #{duration}s"
         true
       else
         puts "Failed to load #{@image_name}"
@@ -31,11 +30,9 @@ class Executor
       puts "Saving #{@image_name} to #{@cache_path}..."
       FileUtils.mkdir_p(File.dirname(@cache_path))
 
-      start_time = Time.now
-      system("docker save #{@image_name} > #{@cache_path}")
-      save_time = (Time.now - start_time).round(1)
+      _, duration = Benchmarking.duration { system("docker save #{@image_name} > #{@cache_path}") }
 
-      puts "Saved #{@image_name} in #{save_time}s (#{file_size_mb} MB)"
+      puts "Saved #{@image_name} in #{duration}s (#{file_size_mb} MB)"
     end
 
     private

@@ -9,6 +9,7 @@ require_relative 'saturn_ci_worker_api/docker_registry_cache'
 require_relative 'buildx_output_parser'
 require_relative 'executor/docker_compose_configuration'
 require_relative 'cached_docker_image'
+require_relative 'benchmarking'
 
 class Executor
   LOG_PATH = '/tmp/output.log'
@@ -254,10 +255,8 @@ class Executor
 
     send_worker_event('docker_build_started', notes: { loading_from_cache: true }.to_json)
     send_worker_event('app_image_load_started')
-    start_time = Time.now
-    success = cached_image.load
-    load_time = (Time.now - start_time).round(1)
-    send_worker_event('app_image_load_finished', notes: { load_time_seconds: load_time }.to_json)
+    success, duration = Benchmarking.duration { cached_image.load }
+    send_worker_event('app_image_load_finished', notes: { load_time_seconds: duration }.to_json)
 
     if success
       puts 'Tagging as saturnci-local...'
