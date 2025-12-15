@@ -19,6 +19,7 @@ module Adapters
       def run
         puts 'Adapter: Ruby on Rails/RSpec'
         @executor.send_worker_event('worker_started')
+        @executor.show_cache_status
 
         setup
         run_dry_run

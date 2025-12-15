@@ -303,6 +303,18 @@ class Executor
     CachedDockerImage.new(image_name: image_name, cache_path: vendor_image_cache_path(image_name)).save
   end
 
+  def show_cache_status
+    cache_base_path = ENV.fetch('CACHE_BASE_PATH', '/var/lib/saturnci-docker')
+    repository_id = ENV.fetch('REPOSITORY_ID')
+    cache_path = "#{cache_base_path}/#{repository_id}"
+
+    puts "Docker cache status for repository #{repository_id}:"
+    puts 'Unclaimed caches:'
+    system("ls -la #{cache_path}/unclaimed/ 2>/dev/null || echo '  (none)'")
+    puts 'Claimed caches:'
+    system("ls -la #{cache_path}/ 2>/dev/null | grep -v unclaimed || echo '  (none)'")
+  end
+
   private
 
   def capture_and_stream_output(command)
