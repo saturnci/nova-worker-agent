@@ -181,7 +181,7 @@ class Executor
     true
   end
 
-  def build_with_cache
+  def preload_app_image
     registry_cache = SaturnCIWorkerAPI::DockerRegistryCache.new(
       username: @task_info['docker_registry_cache_username'],
       password: @task_info['docker_registry_cache_password'],
@@ -282,8 +282,8 @@ class Executor
     puts "Image saved to cache in #{save_time}s"
   end
 
-  def preload_compose_images
-    puts 'Preloading compose images...'
+  def preload_vendor_images
+    puts 'Preloading vendor images...'
     docker_compose_content = File.read('.saturnci/docker-compose.yml')
     config = DockerComposeConfiguration.new(docker_compose_content)
     config.vendor_images.each do |image_name|

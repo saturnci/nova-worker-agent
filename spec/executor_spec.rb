@@ -116,7 +116,7 @@ RSpec.describe Executor do
     end
   end
 
-  describe '#build_with_cache' do
+  describe '#preload_app_image' do
     let!(:executor) { Executor.allocate }
     let!(:registry_cache) { instance_double(SaturnCIWorkerAPI::DockerRegistryCache) }
 
@@ -142,12 +142,12 @@ RSpec.describe Executor do
       end
 
       it 'loads from cache and returns true' do
-        expect(executor.build_with_cache).to be true
+        expect(executor.preload_app_image).to be true
       end
 
       it 'does not authenticate to registry' do
         expect(registry_cache).not_to receive(:authenticate)
-        executor.build_with_cache
+        executor.preload_app_image
       end
     end
 
@@ -163,12 +163,12 @@ RSpec.describe Executor do
 
       it 'builds with buildx' do
         expect(executor).to receive(:capture_and_stream_output).with(/docker buildx build/)
-        executor.build_with_cache
+        executor.preload_app_image
       end
 
       it 'saves image to cache after successful build' do
         expect(executor).to receive(:save_image_to_cache).with('registry:5000/myproject:latest')
-        executor.build_with_cache
+        executor.preload_app_image
       end
     end
   end
