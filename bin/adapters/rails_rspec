@@ -46,6 +46,7 @@ begin
   task_info = executor.task_info
 
   puts 'Image tagged as saturnci-local'
+  ENV['SATURN_TEST_APP_IMAGE_URL'] = 'saturnci-local'
 
   puts 'Setting up database...'
   system("docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
