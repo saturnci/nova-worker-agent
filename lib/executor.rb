@@ -254,30 +254,30 @@ class Executor
 
   def preload_compose_images
     puts 'Preloading compose images...'
-    ensure_communal_image('postgres:17.2-alpine')
-    ensure_communal_image('seleniarm/standalone-chromium')
+    ensure_vendor_image('postgres:17.2-alpine')
+    ensure_vendor_image('seleniarm/standalone-chromium')
   end
 
-  def ensure_communal_image(image_name)
-    return true if load_communal_image(image_name)
+  def ensure_vendor_image(image_name)
+    return true if load_vendor_image(image_name)
 
     puts "Pulling #{image_name}..."
     system("docker pull #{image_name}")
-    save_communal_image(image_name)
+    save_vendor_image(image_name)
     true
   end
 
-  def communal_cache_path(image_name)
+  def vendor_image_cache_path(image_name)
     safe_name = image_name.tr('/', '_').tr(':', '_')
     "/shared/images/#{safe_name}/image.tar"
   end
 
-  def load_communal_image(image_name)
-    cache_path = communal_cache_path(image_name)
+  def load_vendor_image(image_name)
+    cache_path = vendor_image_cache_path(image_name)
     return false unless File.exist?(cache_path)
 
     file_size_mb = (File.size(cache_path) / 1024.0 / 1024.0).round(1)
-    puts "Found cached communal image at #{cache_path} (#{file_size_mb} MB)"
+    puts "Found cached vendor image at #{cache_path} (#{file_size_mb} MB)"
 
     start_time = Time.now
     success = system("docker load < #{cache_path}")
@@ -285,17 +285,17 @@ class Executor
 
     if success
       puts "Loaded #{image_name} in #{load_time}s"
-      puts "Communal image #{image_name} loaded from cache"
+      puts "Vendor image #{image_name} loaded from cache"
       true
     else
-      puts "Failed to load communal image #{image_name}"
+      puts "Failed to load vendor image #{image_name}"
       false
     end
   end
 
-  def save_communal_image(image_name)
-    cache_path = communal_cache_path(image_name)
-    puts "Saving communal image #{image_name} to #{cache_path}..."
+  def save_vendor_image(image_name)
+    cache_path = vendor_image_cache_path(image_name)
+    puts "Saving vendor image #{image_name} to #{cache_path}..."
     FileUtils.mkdir_p(File.dirname(cache_path))
 
     start_time = Time.now
