@@ -39,12 +39,6 @@ RSpec.describe Executor do
         expect(executor).to receive(:system).with('docker load < /shared/repo-123/image.tar')
         executor.load_cached_image('my-image:latest')
       end
-
-      it 'tags the image' do
-        allow(executor).to receive(:system).with('docker load < /shared/repo-123/image.tar').and_return(true)
-        expect(executor).to receive(:system).with('docker tag $(docker images -q | head -1) my-image:latest')
-        executor.load_cached_image('my-image:latest')
-      end
     end
 
     context 'when cached image does not exist' do

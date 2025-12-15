@@ -38,6 +38,7 @@ begin
 
   executor.wait_for_docker
   executor.authenticate_to_registry_cache
+  executor.preload_compose_images
 
   puts 'Building with cache...'
   executor.build_with_cache

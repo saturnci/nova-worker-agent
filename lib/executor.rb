@@ -222,7 +222,7 @@ class Executor
     "#{shared_cache_dir}/image.tar"
   end
 
-  def load_cached_image(image_url)
+  def load_cached_image(_image_url)
     return false unless File.exist?(cached_image_path)
 
     puts "Found cached image at #{cached_image_path}"
@@ -235,7 +235,6 @@ class Executor
 
     if success
       puts "Cached image loaded in #{load_time}s"
-      system("docker tag $(docker images -q | head -1) #{image_url}")
       true
     else
       puts 'Failed to load cached image, will rebuild'
@@ -251,6 +250,59 @@ class Executor
     system("docker save #{image_url} > #{cached_image_path}")
     save_time = (Time.now - start_time).round(1)
     puts "Image saved to cache in #{save_time}s"
+  end
+
+  def preload_compose_images
+    puts 'Preloading compose images...'
+    ensure_communal_image('postgres:17.2-alpine')
+    ensure_communal_image('seleniarm/standalone-chromium')
+  end
+
+  def ensure_communal_image(image_name)
+    return true if load_communal_image(image_name)
+
+    puts "Pulling #{image_name}..."
+    system("docker pull #{image_name}")
+    save_communal_image(image_name)
+    true
+  end
+
+  def communal_cache_path(image_name)
+    safe_name = image_name.tr('/', '_').tr(':', '_')
+    "/shared/images/#{safe_name}/image.tar"
+  end
+
+  def load_communal_image(image_name)
+    cache_path = communal_cache_path(image_name)
+    return false unless File.exist?(cache_path)
+
+    file_size_mb = (File.size(cache_path) / 1024.0 / 1024.0).round(1)
+    puts "Found cached communal image at #{cache_path} (#{file_size_mb} MB)"
+
+    start_time = Time.now
+    success = system("docker load < #{cache_path}")
+    load_time = (Time.now - start_time).round(1)
+
+    if success
+      puts "Loaded #{image_name} in #{load_time}s"
+      puts "Communal image #{image_name} loaded from cache"
+      true
+    else
+      puts "Failed to load communal image #{image_name}"
+      false
+    end
+  end
+
+  def save_communal_image(image_name)
+    cache_path = communal_cache_path(image_name)
+    puts "Saving communal image #{image_name} to #{cache_path}..."
+    FileUtils.mkdir_p(File.dirname(cache_path))
+
+    start_time = Time.now
+    system("docker save #{image_name} > #{cache_path}")
+    save_time = (Time.now - start_time).round(1)
+    file_size_mb = (File.size(cache_path) / 1024.0 / 1024.0).round(1)
+    puts "Saved #{image_name} in #{save_time}s (#{file_size_mb} MB)"
   end
 
   private
