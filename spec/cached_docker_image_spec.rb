@@ -8,46 +8,72 @@ RSpec.describe Executor::CachedDockerImage do
   let(:cached_image) { described_class.new(image_name: image_name, cache_path: cache_path) }
 
   describe '#load' do
-    context 'when cache file exists' do
+    context 'when image already exists in Docker' do
       before do
-        allow(File).to receive(:exist?).with(cache_path).and_return(true)
-        allow(File).to receive(:size).with(cache_path).and_return(500_000_000)
+        allow(cached_image).to receive(:system)
+          .with("docker image inspect #{image_name} > /dev/null 2>&1")
+          .and_return(true)
         allow(cached_image).to receive(:puts)
       end
 
-      context 'when docker load succeeds' do
+      it 'returns true' do
+        expect(cached_image.load).to be true
+      end
+
+      it 'does not run docker load' do
+        expect(cached_image).not_to receive(:system).with("docker load < #{cache_path}")
+        cached_image.load
+      end
+    end
+
+    context 'when image does not exist in Docker' do
+      before do
+        allow(cached_image).to receive(:system)
+          .with("docker image inspect #{image_name} > /dev/null 2>&1")
+          .and_return(false)
+        allow(cached_image).to receive(:puts)
+      end
+
+      context 'when cache file exists' do
         before do
-          allow(cached_image).to receive(:system).and_return(true)
+          allow(File).to receive(:exist?).with(cache_path).and_return(true)
+          allow(File).to receive(:size).with(cache_path).and_return(500_000_000)
         end
 
-        it 'returns true' do
-          expect(cached_image.load).to be true
+        context 'when docker load succeeds' do
+          before do
+            allow(cached_image).to receive(:system).with("docker load < #{cache_path}").and_return(true)
+          end
+
+          it 'returns true' do
+            expect(cached_image.load).to be true
+          end
+
+          it 'runs docker load' do
+            expect(cached_image).to receive(:system).with("docker load < #{cache_path}")
+            cached_image.load
+          end
         end
 
-        it 'runs docker load' do
-          expect(cached_image).to receive(:system).with("docker load < #{cache_path}")
-          cached_image.load
+        context 'when docker load fails' do
+          before do
+            allow(cached_image).to receive(:system).with("docker load < #{cache_path}").and_return(false)
+          end
+
+          it 'returns false' do
+            expect(cached_image.load).to be false
+          end
         end
       end
 
-      context 'when docker load fails' do
+      context 'when cache file does not exist' do
         before do
-          allow(cached_image).to receive(:system).and_return(false)
+          allow(File).to receive(:exist?).with(cache_path).and_return(false)
         end
 
         it 'returns false' do
           expect(cached_image.load).to be false
         end
-      end
-    end
-
-    context 'when cache file does not exist' do
-      before do
-        allow(File).to receive(:exist?).with(cache_path).and_return(false)
-      end
-
-      it 'returns false' do
-        expect(cached_image.load).to be false
       end
     end
   end

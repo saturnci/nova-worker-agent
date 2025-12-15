@@ -11,6 +11,11 @@ class Executor
     end
 
     def load
+      if image_exists_in_docker?
+        puts "Image #{@image_name} already exists in Docker, skipping load"
+        return true
+      end
+
       return false unless File.exist?(@cache_path)
 
       puts "Found cached image at #{@cache_path} (#{file_size_mb} MB)"
@@ -24,6 +29,10 @@ class Executor
         puts "Failed to load #{@image_name}"
         false
       end
+    end
+
+    def image_exists_in_docker?
+      system("docker image inspect #{@image_name} > /dev/null 2>&1")
     end
 
     def save
