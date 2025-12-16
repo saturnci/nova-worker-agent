@@ -142,7 +142,7 @@ class Executor
     puts "Task finished response body: #{response.body}" unless response.body.to_s.empty?
   end
 
-  def wait_for_docker(timeout: 60)
+  def wait_for_docker(timeout: 120)
     print 'Waiting for Docker daemon'
     start_time = Time.now
 
