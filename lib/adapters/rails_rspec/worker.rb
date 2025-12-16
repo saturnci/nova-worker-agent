@@ -53,6 +53,8 @@ module Adapters
 
         puts 'Copying database.yml...'
         FileUtils.cp('.saturnci/database.yml', 'config/database.yml')
+
+        @executor.rewrite_docker_compose_paths
       end
 
       def prepare_docker

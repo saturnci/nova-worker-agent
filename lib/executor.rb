@@ -14,6 +14,7 @@ require_relative 'benchmarking'
 class Executor
   LOG_PATH = '/tmp/output.log'
   PROJECT_DIR = '/repository'
+  DOCKER_COMPOSE_PATH = '.saturnci/docker-compose.yml'
 
   attr_reader :task_info
 
@@ -21,6 +22,18 @@ class Executor
     @host = ENV.fetch('SATURNCI_API_HOST')
     @task_id = ENV.fetch('TASK_ID')
     @worker_id = ENV.fetch('WORKER_ID')
+  end
+
+  def rewrite_docker_compose_paths
+    host_repo_path = "/var/lib/saturnci-repos/#{@task_id}"
+    compose_file = File.join(PROJECT_DIR, DOCKER_COMPOSE_PATH)
+
+    return unless File.exist?(compose_file)
+
+    puts "Rewriting docker-compose paths: /repository -> #{host_repo_path}"
+    content = File.read(compose_file)
+    updated_content = content.gsub(%r{/repository(?=[:/])}, host_repo_path)
+    File.write(compose_file, updated_content)
   end
 
   def send_worker_event(name, notes: nil)
