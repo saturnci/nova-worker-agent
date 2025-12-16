@@ -11,6 +11,15 @@ module Adapters
   module RailsRSpec
     class Worker
       DOCKER_SERVICE_NAME = 'saturn_test_app'
+      DOCKER_COMPOSE_FILE = '.saturnci/docker-compose.yml'
+
+      def self.docker_compose_project_name
+        "task-#{ENV.fetch('TASK_ID')}"
+      end
+
+      def self.docker_compose_base_command
+        "docker-compose -p #{docker_compose_project_name} -f #{DOCKER_COMPOSE_FILE}"
+      end
 
       def initialize(executor)
         @executor = executor
@@ -68,13 +77,13 @@ module Adapters
 
       def setup_database
         puts 'Setting up database...'
-        system("docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
+        system("#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
         @executor.send_worker_event('database_setup_finished')
       end
 
       def run_dry_run
         puts 'Running dry run to get test case identifiers...'
-        command = "docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec"
+        command = "#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec"
         puts 'Command:'
         puts command
         dry_run_json = `#{command}`
@@ -139,7 +148,7 @@ module Adapters
           @grouped_tests[task_info['run_order_index'].to_s].join(' ')
         ].join(' ')
 
-        docker_command = "docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} #{rspec_command}"
+        docker_command = "#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} #{rspec_command}"
         puts "Running command: #{docker_command}"
         @executor.send_worker_event('tests_started')
         system("#{docker_command} 2>&1")
@@ -149,7 +158,7 @@ module Adapters
 
       def precompile_assets
         puts 'Precompiling assets...'
-        system("docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
+        system("#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
         @executor.send_worker_event('assets_precompiled')
       end
 
