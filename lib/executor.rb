@@ -142,6 +142,12 @@ class Executor
     puts "Task finished response body: #{response.body}" unless response.body.to_s.empty?
   end
 
+  def clean_up_docker
+    project = "task-#{@task_id}"
+    puts "Cleaning up Docker resources for project #{project}..."
+    system("docker-compose -p #{project} -f .saturnci/docker-compose.yml down --volumes --remove-orphans 2>&1")
+  end
+
   def wait_for_docker_daemon(timeout: 120)
     print 'Waiting for Docker daemon'
     start_time = Time.now

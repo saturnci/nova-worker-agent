@@ -41,6 +41,7 @@ module Adapters
         puts e.backtrace.join("\n")
         @executor.finish
       ensure
+        @executor.clean_up_docker
         @executor.kill_stream
       end
 
