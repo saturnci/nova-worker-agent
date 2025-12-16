@@ -63,4 +63,72 @@ RSpec.describe Executor::DockerComposeConfiguration do
       expect(config.vendor_images).to eq([])
     end
   end
+
+  describe '#sanitized_content' do
+    it 'removes ports from all services' do
+      yaml_content = <<~YAML
+        version: "3.8"
+        services:
+          postgres:
+            image: postgres:17.2-alpine
+            ports:
+              - "127.0.0.1:5432:5432"
+          redis:
+            image: redis:4.0.14-alpine
+            ports:
+              - "6379:6379"
+          app:
+            image: myapp:latest
+      YAML
+
+      config = described_class.new(yaml_content)
+      sanitized = YAML.safe_load(config.sanitized_content)
+
+      expect(sanitized['services']['postgres']).not_to have_key('ports')
+      expect(sanitized['services']['redis']).not_to have_key('ports')
+      expect(sanitized['services']['app']['image']).to eq('myapp:latest')
+    end
+
+    it 'preserves other service configuration' do
+      yaml_content = <<~YAML
+        version: "3.8"
+        services:
+          postgres:
+            image: postgres:17.2-alpine
+            ports:
+              - "5432:5432"
+            environment:
+              POSTGRES_USER: test
+            volumes:
+              - pgdata:/var/lib/postgresql/data
+        volumes:
+          pgdata:
+      YAML
+
+      config = described_class.new(yaml_content)
+      sanitized = YAML.safe_load(config.sanitized_content)
+
+      expect(sanitized['services']['postgres']).not_to have_key('ports')
+      expect(sanitized['services']['postgres']['environment']).to eq({ 'POSTGRES_USER' => 'test' })
+      expect(sanitized['services']['postgres']['volumes']).to eq(['pgdata:/var/lib/postgresql/data'])
+      expect(sanitized['volumes']).to eq({ 'pgdata' => nil })
+    end
+
+    it 'handles services without ports' do
+      yaml_content = <<~YAML
+        version: "3.8"
+        services:
+          app:
+            image: myapp:latest
+            environment:
+              RAILS_ENV: test
+      YAML
+
+      config = described_class.new(yaml_content)
+      sanitized = YAML.safe_load(config.sanitized_content)
+
+      expect(sanitized['services']['app']['image']).to eq('myapp:latest')
+      expect(sanitized['services']['app']['environment']).to eq({ 'RAILS_ENV' => 'test' })
+    end
+  end
 end

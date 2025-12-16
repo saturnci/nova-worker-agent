@@ -6,6 +6,7 @@ require 'json'
 require_relative '../../saturn_ci_worker_api/request'
 require_relative '../../saturn_ci_worker_api/stream'
 require_relative '../../saturn_ci_worker_api/file_content_request'
+require_relative '../../executor/docker_compose_configuration'
 
 module Adapters
   module RailsRSpec
@@ -62,6 +63,16 @@ module Adapters
 
         puts 'Copying database.yml...'
         FileUtils.cp('.saturnci/database.yml', 'config/database.yml')
+
+        sanitize_docker_compose
+      end
+
+      def sanitize_docker_compose
+        puts 'Sanitizing docker-compose.yml (removing port bindings)...'
+        docker_compose_path = DOCKER_COMPOSE_FILE
+        original_content = File.read(docker_compose_path)
+        config = Executor::DockerComposeConfiguration.new(original_content)
+        File.write(docker_compose_path, config.sanitized_content)
       end
 
       def prepare_docker
