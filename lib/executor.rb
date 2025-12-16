@@ -145,9 +145,12 @@ class Executor
   def cleanup_docker
     puts 'Cleaning up Docker resources...'
     system('docker-compose -f .saturnci/docker-compose.yml down --volumes --remove-orphans 2>/dev/null')
-    puts 'Docker cleanup complete.'
+    puts 'Cleaning up repository directory...'
+    FileUtils.rm_rf(Dir.glob("#{PROJECT_DIR}/*"))
+    FileUtils.rm_rf(Dir.glob("#{PROJECT_DIR}/.*").reject { |f| f.end_with?('.', '..') })
+    puts 'Cleanup complete.'
   rescue StandardError => e
-    puts "Warning: Docker cleanup failed: #{e.message}"
+    puts "Warning: Cleanup failed: #{e.message}"
   end
 
   def wait_for_docker_daemon(timeout: 120)
