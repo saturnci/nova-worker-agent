@@ -14,6 +14,7 @@ module Adapters
         clone_and_configure
         prepare_docker
         setup_database
+        precompile_assets
         @executor.send_worker_event('setup_completed')
       end
     end
