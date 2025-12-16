@@ -10,7 +10,6 @@ module Adapters
       def setup
         puts "Follower worker (order_index: #{task_info['run_order_index']}): waiting for setup"
 
-        @executor.wait_for_setup_complete
         clone_and_configure
         prepare_docker
         setup_database
