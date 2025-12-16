@@ -149,6 +149,12 @@ module Adapters
         @executor.send_worker_event('tests_finished')
       end
 
+      def precompile_assets
+        puts 'Precompiling assets...'
+        system("docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
+        @executor.send_worker_event('assets_precompiled')
+      end
+
       def send_results
         puts 'Sending JSON output...'
         json_output_request = SaturnCIWorkerAPI::FileContentRequest.new(

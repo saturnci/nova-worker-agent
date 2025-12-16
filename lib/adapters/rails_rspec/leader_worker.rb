@@ -29,12 +29,6 @@ module Adapters
           }.to_json
         ).execute
       end
-
-      def precompile_assets
-        puts 'Precompiling assets...'
-        system("docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
-        @executor.send_worker_event('assets_precompiled')
-      end
     end
   end
 end
