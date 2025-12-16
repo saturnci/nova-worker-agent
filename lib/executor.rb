@@ -28,6 +28,10 @@ class Executor
     "#{REPOS_PARENT_DIR}/#{@task_id}"
   end
 
+  def docker_compose_command
+    "docker-compose -p #{@task_id} -f .saturnci/docker-compose.yml"
+  end
+
   def rewrite_docker_compose_paths
     host_repo_path = "/var/lib/saturnci-repos/#{@task_id}"
     compose_file = File.join(project_dir, DOCKER_COMPOSE_PATH)
@@ -182,7 +186,7 @@ class Executor
 
   def cleanup_docker
     puts 'Cleaning up Docker resources...'
-    system('docker-compose -f .saturnci/docker-compose.yml down --volumes --remove-orphans 2>/dev/null')
+    system("#{docker_compose_command} down --volumes --remove-orphans 2>/dev/null")
     puts 'Cleaning up repository directory...'
     FileUtils.rm_rf(project_dir)
     puts 'Cleanup complete.'
