@@ -30,9 +30,19 @@ class Executor
 
     return unless File.exist?(compose_file)
 
-    puts "Rewriting docker-compose paths: /repository -> #{host_repo_path}"
+    puts "Rewriting docker-compose paths to use #{host_repo_path}"
     content = File.read(compose_file)
+
+    # Replace absolute /repository paths
     updated_content = content.gsub(%r{/repository(?=[:/])}, host_repo_path)
+
+    # Replace relative ../ (parent = /repository) with host path
+    updated_content = updated_content.gsub(%r{(\s+- )\.\.(/[:/])}, "\\1#{host_repo_path}\\2")
+    updated_content = updated_content.gsub(/(\s+- )\.\.:/, "\\1#{host_repo_path}:")
+
+    # Replace relative ./ (current = .saturnci/) with host path/.saturnci/
+    updated_content = updated_content.gsub(%r{(\s+- )\./}, "\\1#{host_repo_path}/.saturnci/")
+
     File.write(compose_file, updated_content)
   end
 
