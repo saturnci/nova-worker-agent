@@ -10,6 +10,7 @@ module Adapters
       def setup
         puts 'Leader worker: performing full setup'
 
+        @executor.send_worker_event('setup_completed')
         clone_and_configure
         upload_docker_config
         prepare_docker
