@@ -44,6 +44,12 @@ class Executor
     updated_content = updated_content.gsub(%r{(\s+- )\./}, "\\1#{host_repo_path}/.saturnci/")
 
     File.write(compose_file, updated_content)
+
+    # Debug: show the rewritten volumes section
+    puts 'Rewritten docker-compose.yml volumes:'
+    updated_content.each_line do |line|
+      puts "  #{line}" if line.include?('- ') && (line.include?(':') || line.include?('/'))
+    end
   end
 
   def send_worker_event(name, notes: nil)
