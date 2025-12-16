@@ -159,6 +159,7 @@ class Executor
         send_worker_event('docker_ready')
         puts 'Docker info (registry mirrors):'
         system('docker info 2>/dev/null | grep -A5 "Registry Mirrors" || echo "No registry mirrors configured"')
+        output_cache_status
         return true
       end
 
@@ -169,6 +170,18 @@ class Executor
 
       print '.'
       sleep 1
+    end
+  end
+
+  def output_cache_status
+    repo_id = ENV.fetch('REPOSITORY_ID')
+    tsr_id = @task_info['test_suite_run_id']
+    status_file = "/dind-cache-base/#{repo_id}/cache_status_#{tsr_id}.txt"
+
+    if File.exist?(status_file)
+      puts File.read(status_file)
+    else
+      puts "Cache status file not found: #{status_file}"
     end
   end
 
