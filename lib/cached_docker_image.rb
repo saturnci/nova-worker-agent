@@ -12,21 +12,24 @@ class Executor
 
     def load
       if image_exists_in_docker?
-        puts "Image #{@image_name} already exists in Docker, skipping load"
+        puts "NODE CACHE HIT: #{@image_name} (already in Docker)"
         return true
       end
 
-      return false unless File.exist?(@cache_path)
+      unless File.exist?(@cache_path)
+        puts "NODE CACHE MISS: #{@image_name} (no cached tar)"
+        return false
+      end
 
-      puts "Found cached image at #{@cache_path} (#{file_size_mb} MB)"
+      puts "NODE CACHE HIT: #{@image_name} (#{file_size_mb} MB)"
 
       success, duration = Benchmarking.duration { system("docker load < #{@cache_path}") }
 
       if success
-        puts "Loaded #{@image_name} in #{duration}s"
+        puts "  Loaded in #{duration}s"
         true
       else
-        puts "Failed to load #{@image_name}"
+        puts '  Failed to load from cache'
         false
       end
     end

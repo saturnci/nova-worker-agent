@@ -251,19 +251,17 @@ class Executor
 
   def load_cached_image(image_url)
     cached_image = CachedDockerImage.new(image_name: image_url, cache_path: cached_image_path)
-    return false unless File.exist?(cached_image_path)
 
+    puts 'Checking app image cache...'
     send_worker_event('docker_build_started', notes: { loading_from_cache: true }.to_json)
     send_worker_event('app_image_load_started')
     success, duration = Benchmarking.duration { cached_image.load }
     send_worker_event('app_image_load_finished', notes: { load_time_seconds: duration }.to_json)
 
     if success
-      puts 'Tagging as saturnci-local...'
       system("docker tag #{image_url} saturnci-local")
       true
     else
-      puts 'Will rebuild'
       false
     end
   end
@@ -284,7 +282,6 @@ class Executor
   def ensure_vendor_image(image_name)
     return true if load_vendor_image(image_name)
 
-    puts "Pulling #{image_name}..."
     system("docker pull #{image_name}")
     save_vendor_image(image_name)
     true

@@ -49,8 +49,10 @@ RSpec.describe Executor do
     context 'when cached image does not exist' do
       before do
         allow(executor).to receive(:cached_image_path).and_return('/shared/repo-123/image.tar')
-        allow(File).to receive(:exist?).with('/shared/repo-123/image.tar').and_return(false)
         allow(Executor::CachedDockerImage).to receive(:new).and_return(cached_image)
+        allow(cached_image).to receive(:load).and_return(false)
+        allow(executor).to receive(:puts)
+        allow(executor).to receive(:send_worker_event)
       end
 
       it 'returns false' do
