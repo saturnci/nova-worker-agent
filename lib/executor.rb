@@ -142,7 +142,15 @@ class Executor
     puts "Task finished response body: #{response.body}" unless response.body.to_s.empty?
   end
 
-  def wait_for_docker(timeout: 120)
+  def cleanup_docker
+    puts 'Cleaning up Docker resources...'
+    system('docker-compose -f .saturnci/docker-compose.yml down --volumes --remove-orphans 2>/dev/null')
+    puts 'Docker cleanup complete.'
+  rescue StandardError => e
+    puts "Warning: Docker cleanup failed: #{e.message}"
+  end
+
+  def wait_for_docker_daemon(timeout: 120)
     print 'Waiting for Docker daemon'
     start_time = Time.now
 
@@ -158,8 +166,7 @@ class Executor
 
       if Time.now - start_time > timeout
         puts
-        puts "Timed out waiting for Docker daemon after #{timeout} seconds."
-        return false
+        raise "Timed out waiting for Docker daemon after #{timeout} seconds."
       end
 
       print '.'
@@ -275,43 +282,18 @@ class Executor
     docker_compose_content = File.read('.saturnci/docker-compose.yml')
     config = DockerComposeConfiguration.new(docker_compose_content)
     config.vendor_images.each do |image_name|
-      ensure_vendor_image(image_name)
+      pull_vendor_image(image_name)
     end
   end
 
-  def ensure_vendor_image(image_name)
-    return true if load_vendor_image(image_name)
+  def pull_vendor_image(image_name)
+    if system("docker image inspect #{image_name} > /dev/null 2>&1")
+      puts "Image #{image_name} already cached"
+      return true
+    end
 
+    puts "Pulling #{image_name}..."
     system("docker pull #{image_name}")
-    save_vendor_image(image_name)
-    true
-  end
-
-  def vendor_image_cache_path(image_name)
-    safe_name = image_name.tr('/', '_').tr(':', '_')
-    "/var/lib/saturnci-docker/vendor-images/#{safe_name}/image.tar"
-  end
-
-  def load_vendor_image(image_name)
-    CachedDockerImage.new(image_name: image_name, cache_path: vendor_image_cache_path(image_name)).load
-  end
-
-  def save_vendor_image(image_name)
-    CachedDockerImage.new(image_name: image_name, cache_path: vendor_image_cache_path(image_name)).save
-  end
-
-  def show_cache_status
-    cache_base_path = ENV.fetch('CACHE_BASE_PATH', '/var/lib/saturnci-docker')
-    repository_id = ENV.fetch('REPOSITORY_ID')
-    cache_path = "#{cache_base_path}/#{repository_id}"
-
-    puts "Docker cache status for repository #{repository_id}:"
-    puts 'Unclaimed caches:'
-    system("ls -la #{cache_path}/unclaimed/ 2>/dev/null || echo '  (none)'")
-    puts 'Claimed caches:'
-    system("ls -la #{cache_path}/ 2>/dev/null | grep -v unclaimed || echo '  (none)'")
-    puts 'Vendor image caches:'
-    system("ls -la #{cache_base_path}/vendor-images/ 2>/dev/null || echo '  (none)'")
   end
 
   private

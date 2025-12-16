@@ -32,6 +32,7 @@ module Adapters
         puts e.backtrace.join("\n")
         @executor.finish
       ensure
+        @executor.cleanup_docker
         @executor.kill_stream
       end
 
@@ -55,9 +56,7 @@ module Adapters
       end
 
       def prepare_docker
-        @executor.show_cache_status
-
-        @executor.wait_for_docker
+        @executor.wait_for_docker_daemon
         @executor.authenticate_to_registry_cache
         @executor.preload_vendor_images
 
