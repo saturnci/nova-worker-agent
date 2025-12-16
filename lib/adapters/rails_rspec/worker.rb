@@ -54,6 +54,11 @@ module Adapters
         puts 'Copying database.yml...'
         FileUtils.cp('.saturnci/database.yml', 'config/database.yml')
 
+        # Debug: verify files exist before rewrite
+        puts "DEBUG: TASK_ID=#{ENV.fetch('TASK_ID')}"
+        puts "DEBUG: Current working directory: #{Dir.pwd}"
+        puts "DEBUG: Gemfile exists: #{File.exist?('Gemfile')}"
+
         @executor.rewrite_docker_compose_paths
       end
 
@@ -72,12 +77,21 @@ module Adapters
       def setup_database
         puts 'Setting up database...'
 
-        # Debug: verify files exist at host path
+        # Debug: verify files exist at host path via Docker
         host_path = "/var/lib/saturnci-repos/#{ENV.fetch('TASK_ID')}"
-        puts 'DEBUG: Checking if Gemfile exists at host path'
+        puts "DEBUG: Host path for Docker mounts: #{host_path}"
+        puts 'DEBUG: Listing parent directory /var/lib/saturnci-repos via Docker:'
+        system('docker run --rm -v /var/lib/saturnci-repos:/test alpine ls -la /test/ 2>&1')
+        puts 'DEBUG: Testing Docker mount of task directory:'
         system("docker run --rm -v #{host_path}:/test alpine ls -la /test/ 2>&1 | head -20")
+        puts 'DEBUG: Trying to read Gemfile via Docker mount:'
         system("docker run --rm -v #{host_path}:/test alpine cat /test/Gemfile 2>&1 | head -5")
 
+        # Debug: show the final docker-compose.yml content
+        puts 'DEBUG: Final docker-compose.yml content:'
+        system('cat .saturnci/docker-compose.yml')
+
+        puts 'DEBUG: Running docker-compose db:create db:schema:load...'
         system("docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
         @executor.send_worker_event('database_setup_finished')
       end
@@ -107,7 +121,7 @@ module Adapters
       end
 
       def setup_test_output_stream
-        test_output_file = '/repository/tmp/test_output.txt'
+        test_output_file = "#{@executor.project_dir}/tmp/test_output.txt"
         FileUtils.mkdir_p(File.dirname(test_output_file))
         File.write(test_output_file, '')
 
@@ -169,7 +183,7 @@ module Adapters
           host: ENV.fetch('SATURNCI_API_HOST'),
           api_path: "tasks/#{ENV.fetch('TASK_ID')}/json_output",
           content_type: 'application/json',
-          file_path: '/repository/tmp/json_output.json'
+          file_path: "#{@executor.project_dir}/tmp/json_output.json"
         )
         response = json_output_request.execute
         puts "JSON output response code: #{response.code}"

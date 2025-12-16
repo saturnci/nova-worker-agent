@@ -13,7 +13,7 @@ require_relative 'benchmarking'
 
 class Executor
   LOG_PATH = '/tmp/output.log'
-  PROJECT_DIR = '/repository'
+  REPOS_PARENT_DIR = '/var/lib/saturnci-repos'
   DOCKER_COMPOSE_PATH = '.saturnci/docker-compose.yml'
 
   attr_reader :task_info
@@ -24,9 +24,13 @@ class Executor
     @worker_id = ENV.fetch('WORKER_ID')
   end
 
+  def project_dir
+    "#{REPOS_PARENT_DIR}/#{@task_id}"
+  end
+
   def rewrite_docker_compose_paths
     host_repo_path = "/var/lib/saturnci-repos/#{@task_id}"
-    compose_file = File.join(PROJECT_DIR, DOCKER_COMPOSE_PATH)
+    compose_file = File.join(project_dir, DOCKER_COMPOSE_PATH)
 
     return unless File.exist?(compose_file)
 
@@ -109,12 +113,17 @@ class Executor
     ).execute
     github_token = token_response.body
 
+    # Create the task-specific directory (this makes it visible to Docker)
+    puts "Creating project directory: #{project_dir}"
+    FileUtils.mkdir_p(project_dir)
+
     puts "Cloning #{@task_info['github_repo_full_name']}..."
-    FileUtils.rm_rf(PROJECT_DIR)
-    clone_command = "git clone --recurse-submodules https://x-access-token:#{github_token}@github.com/#{@task_info['github_repo_full_name']} #{PROJECT_DIR}"
+    FileUtils.rm_rf(Dir.glob("#{project_dir}/*"))
+    FileUtils.rm_rf(Dir.glob("#{project_dir}/.*").reject { |f| f.end_with?('.', '..') })
+    clone_command = "git clone --recurse-submodules https://x-access-token:#{github_token}@github.com/#{@task_info['github_repo_full_name']} #{project_dir}"
     system(clone_command)
 
-    Dir.chdir(PROJECT_DIR)
+    Dir.chdir(project_dir)
     puts "Checking out commit #{@task_info['commit_hash']}..."
     system("git checkout #{@task_info['commit_hash']}")
 
@@ -123,7 +132,7 @@ class Executor
   end
 
   def write_env_file
-    env_file_path = File.join(PROJECT_DIR, '.saturnci/.env')
+    env_file_path = File.join(project_dir, '.saturnci/.env')
     puts "Writing env vars to #{env_file_path}..."
 
     File.open(env_file_path, 'w') do |file|
@@ -175,8 +184,7 @@ class Executor
     puts 'Cleaning up Docker resources...'
     system('docker-compose -f .saturnci/docker-compose.yml down --volumes --remove-orphans 2>/dev/null')
     puts 'Cleaning up repository directory...'
-    FileUtils.rm_rf(Dir.glob("#{PROJECT_DIR}/*"))
-    FileUtils.rm_rf(Dir.glob("#{PROJECT_DIR}/.*").reject { |f| f.end_with?('.', '..') })
+    FileUtils.rm_rf(project_dir)
     puts 'Cleanup complete.'
   rescue StandardError => e
     puts "Warning: Cleanup failed: #{e.message}"
