@@ -292,7 +292,7 @@ class Executor
 
   def vendor_image_cache_path(image_name)
     safe_name = image_name.tr('/', '_').tr(':', '_')
-    "/shared/images/#{safe_name}/image.tar"
+    "/var/lib/saturnci-docker/vendor-images/#{safe_name}/image.tar"
   end
 
   def load_vendor_image(image_name)
@@ -313,6 +313,8 @@ class Executor
     system("ls -la #{cache_path}/unclaimed/ 2>/dev/null || echo '  (none)'")
     puts 'Claimed caches:'
     system("ls -la #{cache_path}/ 2>/dev/null | grep -v unclaimed || echo '  (none)'")
+    puts 'Vendor image caches:'
+    system("ls -la #{cache_base_path}/vendor-images/ 2>/dev/null || echo '  (none)'")
   end
 
   private
