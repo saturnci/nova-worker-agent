@@ -19,7 +19,6 @@ module Adapters
       def run
         puts 'Adapter: Ruby on Rails/RSpec'
         @executor.send_worker_event('worker_started')
-        @executor.show_cache_status
 
         setup
         run_dry_run
@@ -56,6 +55,8 @@ module Adapters
       end
 
       def prepare_docker
+        @executor.show_cache_status
+
         @executor.wait_for_docker
         @executor.authenticate_to_registry_cache
         @executor.preload_vendor_images
