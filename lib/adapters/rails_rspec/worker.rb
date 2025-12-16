@@ -32,7 +32,6 @@ module Adapters
         puts e.backtrace.join("\n")
         @executor.finish
       ensure
-        @executor.cleanup_docker
         @executor.kill_stream
       end
 
@@ -53,8 +52,6 @@ module Adapters
 
         puts 'Copying database.yml...'
         FileUtils.cp('.saturnci/database.yml', 'config/database.yml')
-
-        @executor.rewrite_docker_compose_paths
       end
 
       def prepare_docker
@@ -71,13 +68,13 @@ module Adapters
 
       def setup_database
         puts 'Setting up database...'
-        system("#{@executor.docker_compose_command} run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
+        system("docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
         @executor.send_worker_event('database_setup_finished')
       end
 
       def run_dry_run
         puts 'Running dry run to get test case identifiers...'
-        command = "#{@executor.docker_compose_command} run #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec"
+        command = "docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec"
         puts 'Command:'
         puts command
         dry_run_json = `#{command}`
@@ -100,7 +97,7 @@ module Adapters
       end
 
       def setup_test_output_stream
-        test_output_file = "#{@executor.project_dir}/tmp/test_output.txt"
+        test_output_file = "#{Executor::PROJECT_DIR}/tmp/test_output.txt"
         FileUtils.mkdir_p(File.dirname(test_output_file))
         File.write(test_output_file, '')
 
@@ -142,7 +139,7 @@ module Adapters
           @grouped_tests[task_info['run_order_index'].to_s].join(' ')
         ].join(' ')
 
-        docker_command = "#{@executor.docker_compose_command} run #{DOCKER_SERVICE_NAME} #{rspec_command}"
+        docker_command = "docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} #{rspec_command}"
         puts "Running command: #{docker_command}"
         @executor.send_worker_event('tests_started')
         system("#{docker_command} 2>&1")
@@ -152,7 +149,7 @@ module Adapters
 
       def precompile_assets
         puts 'Precompiling assets...'
-        system("#{@executor.docker_compose_command} run #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
+        system("docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
         @executor.send_worker_event('assets_precompiled')
       end
 
@@ -162,7 +159,7 @@ module Adapters
           host: ENV.fetch('SATURNCI_API_HOST'),
           api_path: "tasks/#{ENV.fetch('TASK_ID')}/json_output",
           content_type: 'application/json',
-          file_path: "#{@executor.project_dir}/tmp/json_output.json"
+          file_path: "#{Executor::PROJECT_DIR}/tmp/json_output.json"
         )
         response = json_output_request.execute
         puts "JSON output response code: #{response.code}"

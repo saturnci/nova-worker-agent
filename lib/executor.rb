@@ -13,8 +13,7 @@ require_relative 'benchmarking'
 
 class Executor
   LOG_PATH = '/tmp/output.log'
-  REPOS_PARENT_DIR = '/var/lib/saturnci-repos'
-  DOCKER_COMPOSE_PATH = '.saturnci/docker-compose.yml'
+  PROJECT_DIR = '/repository'
 
   attr_reader :task_info
 
@@ -22,42 +21,6 @@ class Executor
     @host = ENV.fetch('SATURNCI_API_HOST')
     @task_id = ENV.fetch('TASK_ID')
     @worker_id = ENV.fetch('WORKER_ID')
-  end
-
-  def project_dir
-    "#{REPOS_PARENT_DIR}/#{@task_id}"
-  end
-
-  def docker_compose_command
-    "docker-compose -p #{@task_id} -f .saturnci/docker-compose.yml"
-  end
-
-  def rewrite_docker_compose_paths
-    host_repo_path = "/var/lib/saturnci-repos/#{@task_id}"
-    compose_file = File.join(project_dir, DOCKER_COMPOSE_PATH)
-
-    return unless File.exist?(compose_file)
-
-    puts "Rewriting docker-compose paths to use #{host_repo_path}"
-    content = File.read(compose_file)
-
-    # Replace absolute /repository paths
-    updated_content = content.gsub(%r{/repository(?=[:/])}, host_repo_path)
-
-    # Replace relative ../ (parent = /repository) with host path
-    updated_content = updated_content.gsub(%r{(\s+- )\.\.(/[:/])}, "\\1#{host_repo_path}\\2")
-    updated_content = updated_content.gsub(/(\s+- )\.\.:/, "\\1#{host_repo_path}:")
-
-    # Replace relative ./ (current = .saturnci/) with host path/.saturnci/
-    updated_content = updated_content.gsub(%r{(\s+- )\./}, "\\1#{host_repo_path}/.saturnci/")
-
-    File.write(compose_file, updated_content)
-
-    # Debug: show the rewritten volumes section
-    puts 'Rewritten docker-compose.yml volumes:'
-    updated_content.each_line do |line|
-      puts "  #{line}" if line.include?('- ') && (line.include?(':') || line.include?('/'))
-    end
   end
 
   def send_worker_event(name, notes: nil)
@@ -117,17 +80,12 @@ class Executor
     ).execute
     github_token = token_response.body
 
-    # Create the task-specific directory (this makes it visible to Docker)
-    puts "Creating project directory: #{project_dir}"
-    FileUtils.mkdir_p(project_dir)
-
     puts "Cloning #{@task_info['github_repo_full_name']}..."
-    FileUtils.rm_rf(Dir.glob("#{project_dir}/*"))
-    FileUtils.rm_rf(Dir.glob("#{project_dir}/.*").reject { |f| f.end_with?('.', '..') })
-    clone_command = "git clone --recurse-submodules https://x-access-token:#{github_token}@github.com/#{@task_info['github_repo_full_name']} #{project_dir}"
+    FileUtils.rm_rf(PROJECT_DIR)
+    clone_command = "git clone --recurse-submodules https://x-access-token:#{github_token}@github.com/#{@task_info['github_repo_full_name']} #{PROJECT_DIR}"
     system(clone_command)
 
-    Dir.chdir(project_dir)
+    Dir.chdir(PROJECT_DIR)
     puts "Checking out commit #{@task_info['commit_hash']}..."
     system("git checkout #{@task_info['commit_hash']}")
 
@@ -136,7 +94,7 @@ class Executor
   end
 
   def write_env_file
-    env_file_path = File.join(project_dir, '.saturnci/.env')
+    env_file_path = File.join(PROJECT_DIR, '.saturnci/.env')
     puts "Writing env vars to #{env_file_path}..."
 
     File.open(env_file_path, 'w') do |file|
@@ -182,16 +140,6 @@ class Executor
     ).execute
     puts "Task finished response code: #{response.code}"
     puts "Task finished response body: #{response.body}" unless response.body.to_s.empty?
-  end
-
-  def cleanup_docker
-    puts 'Cleaning up Docker resources...'
-    system("#{docker_compose_command} down --volumes --remove-orphans 2>/dev/null")
-    puts 'Cleaning up repository directory...'
-    FileUtils.rm_rf(project_dir)
-    puts 'Cleanup complete.'
-  rescue StandardError => e
-    puts "Warning: Cleanup failed: #{e.message}"
   end
 
   def wait_for_docker_daemon(timeout: 120)
