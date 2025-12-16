@@ -71,6 +71,13 @@ module Adapters
 
       def setup_database
         puts 'Setting up database...'
+
+        # Debug: verify files exist at host path
+        host_path = "/var/lib/saturnci-repos/#{ENV.fetch('TASK_ID')}"
+        puts 'DEBUG: Checking if Gemfile exists at host path'
+        system("docker run --rm -v #{host_path}:/test alpine ls -la /test/ 2>&1 | head -20")
+        system("docker run --rm -v #{host_path}:/test alpine cat /test/Gemfile 2>&1 | head -5")
+
         system("docker-compose -f .saturnci/docker-compose.yml run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
         @executor.send_worker_event('database_setup_finished')
       end
