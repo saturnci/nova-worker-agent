@@ -42,7 +42,7 @@ RSpec.describe Executor::CachedDockerImage do
 
         context 'when docker load succeeds' do
           before do
-            allow(cached_image).to receive(:system).with("docker load < #{cache_path}").and_return(true)
+            allow(cached_image).to receive(:run_docker_load).and_return(['Loaded image: my-image:latest', true, 1.5])
           end
 
           it 'returns true' do
@@ -50,14 +50,14 @@ RSpec.describe Executor::CachedDockerImage do
           end
 
           it 'runs docker load' do
-            expect(cached_image).to receive(:system).with("docker load < #{cache_path}")
+            expect(cached_image).to receive(:run_docker_load)
             cached_image.load
           end
         end
 
         context 'when docker load fails' do
           before do
-            allow(cached_image).to receive(:system).with("docker load < #{cache_path}").and_return(false)
+            allow(cached_image).to receive(:run_docker_load).and_return(['error: something went wrong', false, 0.5])
           end
 
           it 'returns false' do

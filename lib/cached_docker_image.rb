@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'English'
 require 'fileutils'
 require_relative 'benchmarking'
 
@@ -23,13 +24,14 @@ class Executor
 
       puts "NODE CACHE HIT: #{@image_name} (#{file_size_mb} MB)"
 
-      success, duration = Benchmarking.duration { system("docker load < #{@cache_path}") }
+      output, success, duration = run_docker_load
 
       if success
+        puts output
         puts "  Loaded in #{duration}s"
         true
       else
-        puts '  Failed to load from cache'
+        puts "  Failed to load from cache: #{output}"
         false
       end
     end
@@ -45,6 +47,15 @@ class Executor
       _, duration = Benchmarking.duration { system("docker save #{@image_name} > #{@cache_path}") }
 
       puts "Saved #{@image_name} in #{duration}s (#{file_size_mb} MB)"
+    end
+
+    def run_docker_load
+      output = nil
+      success, duration = Benchmarking.duration do
+        output = `docker load < #{@cache_path} 2>&1`
+        $CHILD_STATUS.success?
+      end
+      [output, success, duration]
     end
 
     private
