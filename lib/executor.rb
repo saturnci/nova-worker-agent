@@ -13,7 +13,10 @@ require_relative 'benchmarking'
 
 class Executor
   LOG_PATH = '/tmp/output.log'
-  PROJECT_DIR = '/repository'
+
+  def self.project_dir
+    ENV.fetch('PROJECT_DIR', '/repository')
+  end
 
   attr_reader :task_info
 
@@ -81,11 +84,11 @@ class Executor
     github_token = token_response.body
 
     puts "Cloning #{@task_info['github_repo_full_name']}..."
-    FileUtils.rm_rf(PROJECT_DIR)
-    clone_command = "git clone --recurse-submodules https://x-access-token:#{github_token}@github.com/#{@task_info['github_repo_full_name']} #{PROJECT_DIR}"
+    FileUtils.rm_rf(self.class.project_dir)
+    clone_command = "git clone --recurse-submodules https://x-access-token:#{github_token}@github.com/#{@task_info['github_repo_full_name']} #{self.class.project_dir}"
     system(clone_command)
 
-    Dir.chdir(PROJECT_DIR)
+    Dir.chdir(self.class.project_dir)
     puts "Checking out commit #{@task_info['commit_hash']}..."
     system("git checkout #{@task_info['commit_hash']}")
 
@@ -94,7 +97,7 @@ class Executor
   end
 
   def write_env_file
-    env_file_path = File.join(PROJECT_DIR, '.saturnci/.env')
+    env_file_path = File.join(self.class.project_dir, '.saturnci/.env')
     puts "Writing env vars to #{env_file_path}..."
 
     File.open(env_file_path, 'w') do |file|

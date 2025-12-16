@@ -107,7 +107,7 @@ module Adapters
       end
 
       def setup_test_output_stream
-        test_output_file = "#{Executor::PROJECT_DIR}/tmp/test_output.txt"
+        test_output_file = "#{Executor.project_dir}/tmp/test_output.txt"
         FileUtils.mkdir_p(File.dirname(test_output_file))
         File.write(test_output_file, '')
 
@@ -169,7 +169,7 @@ module Adapters
           host: ENV.fetch('SATURNCI_API_HOST'),
           api_path: "tasks/#{ENV.fetch('TASK_ID')}/json_output",
           content_type: 'application/json',
-          file_path: "#{Executor::PROJECT_DIR}/tmp/json_output.json"
+          file_path: "#{Executor.project_dir}/tmp/json_output.json"
         )
         response = json_output_request.execute
         puts "JSON output response code: #{response.code}"
