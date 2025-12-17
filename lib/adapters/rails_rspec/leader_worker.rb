@@ -12,9 +12,11 @@ module Adapters
         clone_and_configure
         upload_docker_config
         prepare_docker
-        @executor.send_worker_event('setup_completed')
         setup_database
         precompile_assets
+        run_dry_run
+        fetch_test_set
+        @executor.send_worker_event('setup_completed')
 
         execute_test_workflow
       end

@@ -29,7 +29,6 @@ module Adapters
       protected
 
       def execute_test_workflow
-        run_dry_run
         run_tests
         send_results
 
@@ -106,7 +105,6 @@ module Adapters
         puts 'Running tests...'
         setup_test_output_stream
 
-        fetch_test_set
         execute_tests
 
         sleep 2
