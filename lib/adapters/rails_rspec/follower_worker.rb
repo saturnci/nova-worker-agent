@@ -11,10 +11,8 @@ module Adapters
 
         clone_and_configure
         prepare_docker
-        setup_database
-        precompile_assets
-
         @executor.wait_for_setup_complete
+        precompile_assets
         fetch_test_set
         execute_test_workflow
       end
