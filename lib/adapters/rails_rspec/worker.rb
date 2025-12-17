@@ -15,7 +15,7 @@ module Adapters
       DOCKER_COMPOSE_FILE = '.saturnci/docker-compose.yml'
 
       def self.docker_compose_project_name
-        "test-suite-run-#{ENV.fetch('TEST_SUITE_RUN_ID')}"
+        "task-#{ENV.fetch('TASK_ID')}"
       end
 
       def self.docker_compose_base_command
