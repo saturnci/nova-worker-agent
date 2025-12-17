@@ -10,8 +10,8 @@ module Adapters
         @executor.send_worker_event('worker_started')
 
         clone_and_configure
-        prepare_docker
         @executor.wait_for_setup_complete
+        prepare_docker
         precompile_assets
         fetch_test_set
         execute_test_workflow
