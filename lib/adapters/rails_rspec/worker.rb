@@ -26,11 +26,9 @@ module Adapters
         @executor = executor
       end
 
-      def run
-        puts 'Adapter: Ruby on Rails/RSpec'
-        @executor.send_worker_event('worker_started')
+      protected
 
-        setup
+      def execute_test_workflow
         run_dry_run
         run_tests
         send_results

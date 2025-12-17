@@ -5,10 +5,9 @@ require_relative 'worker'
 module Adapters
   module RailsRSpec
     class LeaderWorker < Worker
-      private
-
-      def setup
-        puts 'Leader worker: performing full setup'
+      def run
+        puts 'Adapter: Ruby on Rails/RSpec (Leader)'
+        @executor.send_worker_event('worker_started')
 
         clone_and_configure
         upload_docker_config
@@ -16,7 +15,11 @@ module Adapters
         @executor.send_worker_event('setup_completed')
         setup_database
         precompile_assets
+
+        execute_test_workflow
       end
+
+      private
 
       def upload_docker_config
         SaturnCIWorkerAPI::Request.new(
