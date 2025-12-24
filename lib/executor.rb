@@ -8,6 +8,7 @@ require_relative 'saturn_ci_worker_api/request'
 require_relative 'saturn_ci_worker_api/stream'
 require_relative 'buildx_output_parser'
 require_relative 'executor/docker_compose_configuration'
+require_relative 'executor/client'
 require_relative 'cached_docker_image'
 require_relative 'benchmarking'
 
@@ -24,15 +25,11 @@ class Executor
     @host = ENV.fetch('SATURNCI_API_HOST')
     @task_id = ENV.fetch('TASK_ID')
     @worker_id = ENV.fetch('WORKER_ID')
+    @client = Client.new(host: @host)
   end
 
   def send_worker_event(name, notes: nil)
-    SaturnCIWorkerAPI::Request.new(
-      host: @host,
-      method: :post,
-      endpoint: "workers/#{@worker_id}/worker_events",
-      body: { type: name, notes: notes }.to_json
-    ).execute
+    @client.post("workers/#{@worker_id}/worker_events", { type: name, notes: notes })
   rescue StandardError => e
     puts "Warning: Failed to send worker event '#{name}': #{e.message}"
   end
@@ -52,11 +49,7 @@ class Executor
 
     puts "Task ID: \"#{@task_id}\""
 
-    response = SaturnCIWorkerAPI::Request.new(
-      host: @host,
-      method: :get,
-      endpoint: "tasks/#{@task_id}"
-    ).execute
+    response = @client.get("tasks/#{@task_id}")
     @task_info = JSON.parse(response.body)
     send_worker_event('task_fetched')
 
@@ -75,12 +68,7 @@ class Executor
 
   def clone_repo
     puts 'Getting GitHub token...'
-    token_response = SaturnCIWorkerAPI::Request.new(
-      host: @host,
-      method: :post,
-      endpoint: 'github_tokens',
-      body: { github_installation_id: @task_info['github_installation_id'] }.to_json
-    ).execute
+    token_response = @client.post('github_tokens', { github_installation_id: @task_info['github_installation_id'] })
     github_token = token_response.body
 
     puts "Cloning #{@task_info['github_repo_full_name']}..."
@@ -117,11 +105,7 @@ class Executor
   def wait_for_setup_complete
     puts 'Waiting for setup to complete...'
     loop do
-      response = SaturnCIWorkerAPI::Request.new(
-        host: @host,
-        method: :get,
-        endpoint: "tasks/#{@task_id}"
-      ).execute
+      response = @client.get("tasks/#{@task_id}")
       task_data = JSON.parse(response.body)
 
       if task_data['setup_completed']
@@ -136,11 +120,7 @@ class Executor
 
   def finish
     puts 'Sending task finished event...'
-    response = SaturnCIWorkerAPI::Request.new(
-      host: @host,
-      method: :post,
-      endpoint: "tasks/#{@task_id}/task_finished_events"
-    ).execute
+    response = @client.post("tasks/#{@task_id}/task_finished_events")
     puts "Task finished response code: #{response.code}"
     puts "Task finished response body: #{response.body}" unless response.body.to_s.empty?
   end

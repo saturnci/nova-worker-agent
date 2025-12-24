@@ -137,10 +137,12 @@ RSpec.describe Executor do
 
   describe '#wait_for_setup_complete' do
     let!(:executor) { Executor.allocate }
+    let!(:client) { instance_double(Executor::Client) }
 
     before do
       executor.instance_variable_set(:@host, 'http://localhost')
       executor.instance_variable_set(:@task_id, 'task-123')
+      executor.instance_variable_set(:@client, client)
       allow(executor).to receive(:puts)
       allow(executor).to receive(:sleep)
     end
@@ -148,9 +150,7 @@ RSpec.describe Executor do
     context 'when setup is already complete' do
       before do
         response = instance_double('Response', body: '{"setup_completed": true}')
-        allow(SaturnCIWorkerAPI::Request).to receive(:new).and_return(
-          instance_double('Request', execute: response)
-        )
+        allow(client).to receive(:get).with('tasks/task-123').and_return(response)
       end
 
       it 'returns immediately' do
@@ -163,9 +163,7 @@ RSpec.describe Executor do
       before do
         not_complete = instance_double('Response', body: '{"setup_completed": false}')
         complete = instance_double('Response', body: '{"setup_completed": true}')
-        request = instance_double('Request')
-        allow(SaturnCIWorkerAPI::Request).to receive(:new).and_return(request)
-        allow(request).to receive(:execute).and_return(not_complete, not_complete, complete)
+        allow(client).to receive(:get).with('tasks/task-123').and_return(not_complete, not_complete, complete)
       end
 
       it 'polls until setup is complete' do
