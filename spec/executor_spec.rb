@@ -135,6 +135,44 @@ RSpec.describe Executor do
     end
   end
 
+  describe '#wait_for_setup_complete' do
+    let!(:executor) { Executor.allocate }
+    let!(:client) { instance_double(SaturnCIWorkerAPIClient) }
+
+    before do
+      executor.instance_variable_set(:@host, 'http://localhost')
+      executor.instance_variable_set(:@task_id, 'task-123')
+      executor.instance_variable_set(:@client, client)
+      allow(executor).to receive(:puts)
+      allow(executor).to receive(:sleep)
+    end
+
+    context 'when setup is already complete' do
+      before do
+        response = instance_double('Response', body: '{"setup_completed": true}')
+        allow(client).to receive(:get).with('tasks/task-123').and_return(response)
+      end
+
+      it 'returns immediately' do
+        expect(executor).not_to receive(:sleep)
+        executor.wait_for_setup_complete
+      end
+    end
+
+    context 'when setup completes after polling' do
+      before do
+        not_complete = instance_double('Response', body: '{"setup_completed": false}')
+        complete = instance_double('Response', body: '{"setup_completed": true}')
+        allow(client).to receive(:get).with('tasks/task-123').and_return(not_complete, not_complete, complete)
+      end
+
+      it 'polls until setup is complete' do
+        expect(executor).to receive(:sleep).with(2).twice
+        executor.wait_for_setup_complete
+      end
+    end
+  end
+
   describe '#preload_app_image' do
     let!(:executor) { Executor.allocate }
     let!(:cache_key) { 'abc123def456' }
