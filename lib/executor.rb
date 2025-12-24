@@ -17,7 +17,7 @@ class Executor
     ENV.fetch('PROJECT_DIR', '/repository')
   end
 
-  attr_reader :task_info
+  attr_reader :task_info, :client, :task_id
 
   def initialize(host:, task_id:, worker_id:, client:)
     @host = host
@@ -98,25 +98,6 @@ class Executor
   def kill_stream
     sleep 2
     @stream.kill
-  end
-
-  def wait_for_setup_complete
-    puts 'Waiting for setup to complete...'
-    loop do
-      if setup_completed?
-        puts 'Setup complete, proceeding...'
-        return
-      end
-
-      puts 'Setup not complete yet, polling...'
-      sleep 2
-    end
-  end
-
-  def setup_completed?
-    response = @client.get("tasks/#{@task_id}")
-    task_data = JSON.parse(response.body)
-    task_data['setup_completed']
   end
 
   def finish

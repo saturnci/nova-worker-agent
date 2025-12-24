@@ -1,36 +1,46 @@
 # frozen_string_literal: true
 
 require_relative '../../../lib/executor'
+require_relative '../../../lib/saturn_ci_worker_api_client'
 require_relative '../../../lib/adapters/rails_rspec/follower_worker'
 
 RSpec.describe Adapters::RailsRSpec::FollowerWorker do
-  describe '#run' do
+  describe '#wait_for_setup_complete' do
     let!(:executor) { instance_double(Executor) }
-    let!(:worker) { described_class.new(executor) }
+    let!(:client) { instance_double(SaturnCIWorkerAPIClient) }
+    let!(:worker) { described_class.allocate }
 
     before do
-      allow(executor).to receive(:send_worker_event)
-      allow(executor).to receive(:task_info).and_return({ 'run_order_index' => 2 })
-      allow(executor).to receive(:wait_for_setup_complete)
-      allow(worker).to receive(:clone_and_configure)
-      allow(worker).to receive(:prepare_docker)
-      allow(worker).to receive(:setup_database)
-      allow(worker).to receive(:precompile_assets)
-      allow(worker).to receive(:fetch_test_set)
-      allow(worker).to receive(:execute_test_workflow)
+      worker.instance_variable_set(:@executor, executor)
+      allow(executor).to receive(:client).and_return(client)
+      allow(executor).to receive(:task_id).and_return('task-123')
       allow(worker).to receive(:puts)
+      allow(worker).to receive(:sleep)
     end
 
-    it 'waits for setup complete and fetches test set before executing test workflow' do
-      call_order = []
+    context 'when setup is already complete' do
+      before do
+        response = instance_double('Response', body: '{"setup_completed": true}')
+        allow(client).to receive(:get).with('tasks/task-123').and_return(response)
+      end
 
-      allow(executor).to receive(:wait_for_setup_complete) { call_order << :wait_for_setup_complete }
-      allow(worker).to receive(:fetch_test_set) { call_order << :fetch_test_set }
-      allow(worker).to receive(:execute_test_workflow) { call_order << :execute_test_workflow }
+      it 'returns immediately' do
+        expect(worker).not_to receive(:sleep)
+        worker.send(:wait_for_setup_complete)
+      end
+    end
 
-      worker.run
+    context 'when setup completes after polling' do
+      before do
+        not_complete = instance_double('Response', body: '{"setup_completed": false}')
+        complete = instance_double('Response', body: '{"setup_completed": true}')
+        allow(client).to receive(:get).with('tasks/task-123').and_return(not_complete, not_complete, complete)
+      end
 
-      expect(call_order).to eq(%i[wait_for_setup_complete fetch_test_set execute_test_workflow])
+      it 'polls until setup is complete' do
+        expect(worker).to receive(:sleep).with(2).twice
+        worker.send(:wait_for_setup_complete)
+      end
     end
   end
 end
