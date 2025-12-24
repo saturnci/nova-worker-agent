@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'digest'
 require 'fileutils'
 require 'json'
 require 'open3'
@@ -188,13 +189,17 @@ class Executor
   end
 
   def preload_app_image
-    image_name = 'saturnci-local'
+    cache_key = compute_cache_key
+    tagged_image_name = "saturnci-local:#{cache_key}"
 
-    return true if load_cached_image(image_name)
+    if load_cached_image(tagged_image_name)
+      system("docker tag #{tagged_image_name} saturnci-local")
+      return true
+    end
 
     build_command = [
       'docker build',
-      "-t #{image_name}",
+      "-t #{tagged_image_name}",
       '--progress=plain',
       '-f .saturnci/Dockerfile .'
     ].join(' ')
@@ -209,7 +214,10 @@ class Executor
     send_worker_event('docker_build_finished', notes: build_metrics.to_json)
     puts "Build metrics: #{build_metrics}"
 
-    save_image_to_cache(image_name) if success
+    if success
+      save_image_to_cache(tagged_image_name)
+      system("docker tag #{tagged_image_name} saturnci-local")
+    end
 
     success
   end
@@ -222,8 +230,23 @@ class Executor
     "#{shared_cache_dir}/image.tar"
   end
 
+  def compute_cache_key
+    gemfile_lock = begin
+      File.read("#{self.class.project_dir}/Gemfile.lock")
+    rescue StandardError
+      ''
+    end
+    dockerfile = begin
+      File.read("#{self.class.project_dir}/.saturnci/Dockerfile")
+    rescue StandardError
+      ''
+    end
+    Digest::SHA256.hexdigest(gemfile_lock + dockerfile)[0..15]
+  end
+
   def load_cached_image(image_url)
-    cached_image = CachedDockerImage.new(image_name: image_url, cache_path: cached_image_path)
+    cache_key = compute_cache_key
+    cached_image = CachedDockerImage.new(image_name: image_url, cache_path: cached_image_path, cache_key: cache_key)
 
     puts 'Checking app image cache...'
     send_worker_event('docker_build_started', notes: { loading_from_cache: true }.to_json)
@@ -240,7 +263,8 @@ class Executor
   end
 
   def save_image_to_cache(image_url)
-    CachedDockerImage.new(image_name: image_url, cache_path: cached_image_path).save
+    cache_key = compute_cache_key
+    CachedDockerImage.new(image_name: image_url, cache_path: cached_image_path, cache_key: cache_key).save
   end
 
   def preload_vendor_images
