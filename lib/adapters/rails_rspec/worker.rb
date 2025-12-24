@@ -74,13 +74,11 @@ module Adapters
 
       def prepare_docker
         @executor.wait_for_docker_daemon
-        @executor.authenticate_to_registry_cache
         @executor.preload_vendor_images
 
         puts 'Preloading app image...'
         @executor.preload_app_image
 
-        puts 'Image tagged as saturnci-local'
         ENV['SATURN_TEST_APP_IMAGE_URL'] = 'saturnci-local'
       end
 

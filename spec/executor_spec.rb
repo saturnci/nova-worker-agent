@@ -121,35 +121,23 @@ RSpec.describe Executor do
 
   describe '#preload_app_image' do
     let!(:executor) { Executor.allocate }
-    let!(:registry_cache) { instance_double(SaturnCIWorkerAPI::DockerRegistryCache) }
 
     before do
-      executor.instance_variable_set(
-        :@task_info,
-        {
-          'docker_registry_cache_username' => 'user',
-          'docker_registry_cache_password' => 'pass',
-          'project_name' => 'myproject',
-          'branch_name' => 'main'
-        }
-      )
-      allow(SaturnCIWorkerAPI::DockerRegistryCache).to receive(:new).and_return(registry_cache)
-      allow(registry_cache).to receive(:image_url).and_return('registry:5000/myproject')
       allow(executor).to receive(:puts)
       allow(executor).to receive(:send_worker_event)
     end
 
     context 'when cached image exists' do
       before do
-        allow(executor).to receive(:load_cached_image).and_return(true)
+        allow(executor).to receive(:load_cached_image).with('saturnci-local').and_return(true)
       end
 
       it 'loads from cache and returns true' do
         expect(executor.preload_app_image).to be true
       end
 
-      it 'does not authenticate to registry' do
-        expect(registry_cache).not_to receive(:authenticate)
+      it 'does not build' do
+        expect(executor).not_to receive(:capture_and_stream_output)
         executor.preload_app_image
       end
     end
@@ -157,20 +145,17 @@ RSpec.describe Executor do
     context 'when cached image does not exist' do
       before do
         allow(executor).to receive(:load_cached_image).and_return(false)
-        allow(registry_cache).to receive(:authenticate).and_return(true)
-        allow(executor).to receive(:system).and_return(true)
-        allow(File).to receive(:write)
         allow(executor).to receive(:capture_and_stream_output).and_return(['', true])
         allow(executor).to receive(:save_image_to_cache)
       end
 
-      it 'builds with buildx' do
-        expect(executor).to receive(:capture_and_stream_output).with(/docker buildx build/)
+      it 'builds with docker build' do
+        expect(executor).to receive(:capture_and_stream_output).with(/docker build.*-t saturnci-local/)
         executor.preload_app_image
       end
 
       it 'saves image to cache after successful build' do
-        expect(executor).to receive(:save_image_to_cache).with('registry:5000/myproject:latest')
+        expect(executor).to receive(:save_image_to_cache).with('saturnci-local')
         executor.preload_app_image
       end
     end

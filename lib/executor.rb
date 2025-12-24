@@ -5,7 +5,6 @@ require 'json'
 require 'open3'
 require_relative 'saturn_ci_worker_api/request'
 require_relative 'saturn_ci_worker_api/stream'
-require_relative 'saturn_ci_worker_api/docker_registry_cache'
 require_relative 'buildx_output_parser'
 require_relative 'executor/docker_compose_configuration'
 require_relative 'cached_docker_image'
@@ -188,55 +187,14 @@ class Executor
     end
   end
 
-  def authenticate_to_registry_cache
-    registry_cache = SaturnCIWorkerAPI::DockerRegistryCache.new(
-      username: @task_info['docker_registry_cache_username'],
-      password: @task_info['docker_registry_cache_password'],
-      project_name: @task_info['project_name']&.downcase,
-      branch_name: @task_info['branch_name']&.downcase
-    )
-
-    puts 'Authenticating to Docker registry cache...'
-    unless registry_cache.authenticate
-      puts 'Warning: Docker registry cache authentication failed'
-      return false
-    end
-    true
-  end
-
   def preload_app_image
-    registry_cache = SaturnCIWorkerAPI::DockerRegistryCache.new(
-      username: @task_info['docker_registry_cache_username'],
-      password: @task_info['docker_registry_cache_password'],
-      project_name: @task_info['project_name']&.downcase,
-      branch_name: @task_info['branch_name']&.downcase
-    )
+    image_name = 'saturnci-local'
 
-    image_url = registry_cache.image_url
-
-    return true if load_cached_image("#{image_url}:latest")
-
-    puts 'Authenticating to Docker registry cache...'
-    unless registry_cache.authenticate
-      puts 'Warning: Docker registry cache authentication failed, building without cache'
-      return false
-    end
-
-    puts 'Creating buildx builder...'
-    buildkitd_config = <<~TOML
-      [registry."docker-image-registry-service:5000"]
-        http = true
-        insecure = true
-    TOML
-    File.write('/tmp/buildkitd.toml', buildkitd_config)
-    system('docker buildx create --name saturnci-builder --driver docker-container --config /tmp/buildkitd.toml --use 2>/dev/null || docker buildx use saturnci-builder')
+    return true if load_cached_image(image_name)
 
     build_command = [
-      'docker buildx build',
-      '--load',
-      "-t #{image_url}:latest",
-      "--cache-from type=registry,ref=#{image_url}:cache",
-      "--cache-to type=registry,ref=#{image_url}:cache,mode=max",
+      'docker build',
+      "-t #{image_name}",
       '--progress=plain',
       '-f .saturnci/Dockerfile .'
     ].join(' ')
@@ -246,18 +204,12 @@ class Executor
 
     buildx_output, success = capture_and_stream_output("#{build_command} 2>&1")
 
-    raise "Cache import failed: #{buildx_output[/ERROR:.*$/]}" if buildx_output.include?('failed to configure registry cache importer')
-
     build_metrics = BuildxOutputParser.new.parse(buildx_output)
 
     send_worker_event('docker_build_finished', notes: build_metrics.to_json)
     puts "Build metrics: #{build_metrics}"
 
-    if success
-      save_image_to_cache("#{image_url}:latest")
-      puts 'Tagging as saturnci-local...'
-      system("docker tag #{image_url}:latest saturnci-local")
-    end
+    save_image_to_cache(image_name) if success
 
     success
   end
