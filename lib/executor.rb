@@ -100,22 +100,6 @@ class Executor
     @stream.kill
   end
 
-  def wait_for_setup_complete
-    puts 'Waiting for setup to complete...'
-    loop do
-      response = @client.get("tasks/#{@task_id}")
-      task_data = JSON.parse(response.body)
-
-      if task_data['setup_completed']
-        puts 'Setup complete, proceeding...'
-        return
-      end
-
-      puts 'Setup not complete yet, polling...'
-      sleep 2
-    end
-  end
-
   def finish
     puts 'Sending task finished event...'
     response = @client.post("tasks/#{@task_id}/task_finished_events")
