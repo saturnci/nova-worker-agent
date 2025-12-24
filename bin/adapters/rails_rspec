@@ -2,10 +2,17 @@
 # frozen_string_literal: true
 
 require_relative '../../lib/executor'
+require_relative '../../lib/saturn_ci_worker_api_client'
 require_relative '../../lib/adapters/rails_rspec/leader_worker'
 require_relative '../../lib/adapters/rails_rspec/follower_worker'
 
-executor = Executor.new
+host = ENV.fetch('SATURNCI_API_HOST')
+executor = Executor.new(
+  host: host,
+  task_id: ENV.fetch('TASK_ID'),
+  worker_id: ENV.fetch('WORKER_ID'),
+  client: SaturnCIWorkerAPIClient.new(host: host)
+)
 executor.start_stream
 
 worker_class = executor.task_info['run_order_index'] == 1 ? Adapters::RailsRSpec::LeaderWorker : Adapters::RailsRSpec::FollowerWorker
