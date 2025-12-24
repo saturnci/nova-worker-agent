@@ -8,7 +8,7 @@ require_relative 'saturn_ci_worker_api/request'
 require_relative 'saturn_ci_worker_api/stream'
 require_relative 'buildx_output_parser'
 require_relative 'executor/docker_compose_configuration'
-require_relative 'executor/client'
+require_relative 'saturn_ci_worker_api_client'
 require_relative 'cached_docker_image'
 require_relative 'benchmarking'
 
@@ -25,7 +25,7 @@ class Executor
     @host = ENV.fetch('SATURNCI_API_HOST')
     @task_id = ENV.fetch('TASK_ID')
     @worker_id = ENV.fetch('WORKER_ID')
-    @client = Client.new(host: @host)
+    @client = SaturnCIWorkerAPIClient.new(host: @host)
   end
 
   def send_worker_event(name, notes: nil)

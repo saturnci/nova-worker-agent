@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require_relative '../../lib/executor/client'
+require_relative '../lib/saturn_ci_worker_api_client'
 
-RSpec.describe Executor::Client do
+RSpec.describe SaturnCIWorkerAPIClient do
   let(:host) { 'http://localhost:3000' }
   let(:client) { described_class.new(host: host) }
 

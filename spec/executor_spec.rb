@@ -137,7 +137,7 @@ RSpec.describe Executor do
 
   describe '#wait_for_setup_complete' do
     let!(:executor) { Executor.allocate }
-    let!(:client) { instance_double(Executor::Client) }
+    let!(:client) { instance_double(SaturnCIWorkerAPIClient) }
 
     before do
       executor.instance_variable_set(:@host, 'http://localhost')
