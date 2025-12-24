@@ -30,20 +30,23 @@ module Adapters
 
       def execute_test_workflow
         run_tests
-        send_results
-
-        puts 'Task finished.'
-        @executor.finish
+        finish
       rescue StandardError => e
         puts "ERROR: #{e.class}: #{e.message}"
         puts e.backtrace.join("\n")
-        @executor.finish
       ensure
+        @executor.finish
         @executor.clean_up_docker
         @executor.kill_stream
       end
 
       private
+
+      def finish
+        send_results
+        puts 'Task finished.'
+        @executor.finish
+      end
 
       def task_info
         @executor.task_info
