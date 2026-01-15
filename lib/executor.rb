@@ -156,6 +156,8 @@ class Executor
 
     if load_cached_image(tagged_image_name)
       system("docker tag #{tagged_image_name} saturnci-local")
+      raise 'Cached image Gemfile.lock does not match repo' unless cached_image_gemfile_lock_matches_repo_gemfile_lock?
+
       return true
     end
 
@@ -227,6 +229,12 @@ class Executor
   def save_image_to_cache(image_url)
     cache_key = compute_cache_key
     CachedDockerImage.new(image_name: image_url, cache_path: cached_image_path, cache_key: cache_key).save
+  end
+
+  def cached_image_gemfile_lock_matches_repo_gemfile_lock?
+    repo_gemfile_lock = File.read("#{self.class.project_dir}/Gemfile.lock")
+    image_gemfile_lock = `docker run --rm saturnci-local cat /app/Gemfile.lock 2>/dev/null`
+    repo_gemfile_lock.strip == image_gemfile_lock.strip
   end
 
   def preload_vendor_images

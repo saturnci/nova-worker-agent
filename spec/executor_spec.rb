@@ -149,6 +149,7 @@ RSpec.describe Executor do
       before do
         allow(executor).to receive(:load_cached_image).with("saturnci-local:#{cache_key}").and_return(true)
         allow(executor).to receive(:system)
+        allow(executor).to receive(:cached_image_gemfile_lock_matches_repo_gemfile_lock?).and_return(true)
       end
 
       it 'loads from cache and returns true' do
