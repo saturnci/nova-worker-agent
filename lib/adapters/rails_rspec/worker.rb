@@ -166,10 +166,10 @@ module Adapters
           '--format json --out tmp/json_output.json',
           '--force-color',
           "--order rand:#{task_info['rspec_seed']}",
-          '$(cat tmp/spec_files.txt)'
+          '$(cat /tmp/spec_files.txt)'
         ].join(' ')
 
-        docker_command = "#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} sh -c '#{rspec_command}'"
+        docker_command = "#{self.class.docker_compose_base_command} run -v #{spec_files_path}:/tmp/spec_files.txt #{DOCKER_SERVICE_NAME} sh -c '#{rspec_command}'"
         puts "Running command: #{docker_command}"
         @executor.send_task_event('tests_started')
         system("#{docker_command} 2>&1")
