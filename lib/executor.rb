@@ -237,7 +237,7 @@ class Executor
 
   def cached_image_gemfile_lock_matches_repo_gemfile_lock?
     repo_gemfile_lock = File.read("#{self.class.project_dir}/Gemfile.lock")
-    image_gemfile_lock = `docker run --rm --entrypoint cat saturnci-local /app/Gemfile.lock 2>/dev/null`
+    image_gemfile_lock = `timeout 10 docker run --rm --entrypoint cat saturnci-local /app/Gemfile.lock 2>/dev/null`
     repo_gemfile_lock.strip == image_gemfile_lock.strip
   end
 
