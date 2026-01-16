@@ -20,16 +20,16 @@ class Executor
       end
 
       if image_exists_in_docker?
-        puts "NODE CACHE HIT: #{@image_name} (already in Docker)"
+        puts "CACHE HIT: #{@image_name} (already in Docker)"
         return true
       end
 
       unless File.exist?(@cache_path)
-        puts "NODE CACHE MISS: #{@image_name} (no cached tar)"
+        puts "CACHE MISS: #{@image_name} (no cached tar at #{@cache_path})"
         return false
       end
 
-      puts "NODE CACHE HIT: #{@image_name} (#{file_size_mb} MB)"
+      puts "CACHE HIT: #{@image_name} (loading from #{@cache_path}, #{file_size_mb} MB)"
 
       output, success, duration = run_docker_load
 
