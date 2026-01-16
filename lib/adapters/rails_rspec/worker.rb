@@ -15,11 +15,17 @@ module Adapters
       DOCKER_COMPOSE_FILE = '.saturnci/docker-compose.yml'
 
       def self.docker_compose_project_name
-        "task-#{ENV.fetch('TASK_ID')}"
+        task_id = ENV.fetch('TASK_ID')
+        raise 'TASK_ID is empty' if task_id.to_s.strip.empty?
+
+        "task-#{task_id}"
       end
 
       def self.docker_compose_base_command
-        "docker-compose -p #{docker_compose_project_name} -f #{DOCKER_COMPOSE_FILE}"
+        project_name = docker_compose_project_name
+        raise 'docker_compose_project_name is empty' if project_name.to_s.strip.empty?
+
+        "docker-compose -p #{project_name} -f #{DOCKER_COMPOSE_FILE}"
       end
 
       def initialize(executor)
