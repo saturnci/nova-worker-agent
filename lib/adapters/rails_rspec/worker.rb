@@ -153,6 +153,12 @@ module Adapters
       end
 
       def execute_tests
+        spec_files = @grouped_tests[task_info['run_order_index'].to_s]
+        spec_files_path = "#{Executor.project_dir}/tmp/spec_files.txt"
+        FileUtils.mkdir_p(File.dirname(spec_files_path))
+        File.write(spec_files_path, spec_files.join("\n"))
+        puts "Wrote #{spec_files.count} spec files to #{spec_files_path}"
+
         rspec_command = [
           'bundle exec rspec',
           '--format documentation',
@@ -160,10 +166,10 @@ module Adapters
           '--format json --out tmp/json_output.json',
           '--force-color',
           "--order rand:#{task_info['rspec_seed']}",
-          @grouped_tests[task_info['run_order_index'].to_s].join(' ')
+          '$(cat tmp/spec_files.txt)'
         ].join(' ')
 
-        docker_command = "#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} #{rspec_command}"
+        docker_command = "#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} sh -c '#{rspec_command}'"
         puts "Running command: #{docker_command}"
         @executor.send_task_event('tests_started')
         system("#{docker_command} 2>&1")
