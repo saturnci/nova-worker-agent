@@ -84,7 +84,7 @@ RSpec.describe Executor do
         allow(cached_image).to receive(:load).and_return(true)
         allow(executor).to receive(:system).and_return(true)
         allow(executor).to receive(:puts)
-        allow(executor).to receive(:send_worker_event)
+        allow(executor).to receive(:send_task_event)
       end
 
       it 'loads the image and returns true' do
@@ -105,7 +105,7 @@ RSpec.describe Executor do
         allow(Executor::CachedDockerImage).to receive(:new).and_return(cached_image)
         allow(cached_image).to receive(:load).and_return(false)
         allow(executor).to receive(:puts)
-        allow(executor).to receive(:send_worker_event)
+        allow(executor).to receive(:send_task_event)
       end
 
       it 'returns false' do
@@ -141,7 +141,7 @@ RSpec.describe Executor do
 
     before do
       allow(executor).to receive(:puts)
-      allow(executor).to receive(:send_worker_event)
+      allow(executor).to receive(:send_task_event)
       allow(executor).to receive(:compute_cache_key).and_return(cache_key)
     end
 

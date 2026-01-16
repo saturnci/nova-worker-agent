@@ -7,7 +7,7 @@ module Adapters
     class LeaderWorker < Worker
       def run
         puts 'Adapter: Ruby on Rails/RSpec (Leader)'
-        @executor.send_worker_event('worker_started')
+        @executor.send_task_event('worker_started')
 
         clone_and_configure
         upload_docker_config
@@ -16,7 +16,7 @@ module Adapters
         precompile_assets
         run_dry_run
         fetch_test_set
-        @executor.send_worker_event('setup_completed')
+        @executor.send_task_event('setup_completed')
 
         execute_test_workflow
       end

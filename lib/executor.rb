@@ -26,10 +26,10 @@ class Executor
     @client = client
   end
 
-  def send_worker_event(name, notes: nil)
-    @client.post("workers/#{@worker_id}/worker_events", { type: name, notes: notes })
+  def send_task_event(name, notes: nil)
+    @client.post("tasks/#{@task_id}/task_events", { type: name, notes: notes })
   rescue StandardError => e
-    puts "Warning: Failed to send worker event '#{name}': #{e.message}"
+    puts "Warning: Failed to send task event '#{name}': #{e.message}"
   end
 
   def start_stream
@@ -49,7 +49,7 @@ class Executor
 
     response = @client.get("tasks/#{@task_id}")
     @task_info = JSON.parse(response.body)
-    send_worker_event('task_fetched')
+    send_task_event('task_fetched')
 
     puts <<~OUTPUT
       Task info received:
@@ -121,7 +121,7 @@ class Executor
       if system('docker info > /dev/null 2>&1')
         puts
         puts 'Docker daemon is ready.'
-        send_worker_event('docker_ready')
+        send_task_event('docker_ready')
         puts 'Docker info (registry mirrors):'
         system('docker info 2>/dev/null | grep -A5 "Registry Mirrors" || echo "No registry mirrors configured"')
         output_cache_status
@@ -169,13 +169,13 @@ class Executor
     ].join(' ')
 
     puts "Build command: #{build_command}"
-    send_worker_event('docker_build_started')
+    send_task_event('docker_build_started')
 
     buildx_output, success = capture_and_stream_output("#{build_command} 2>&1")
 
     build_metrics = BuildxOutputParser.new.parse(buildx_output)
 
-    send_worker_event('docker_build_finished', notes: build_metrics.to_json)
+    send_task_event('docker_build_finished', notes: build_metrics.to_json)
     puts "Build metrics: #{build_metrics}"
 
     if success
@@ -213,10 +213,10 @@ class Executor
     cached_image = CachedDockerImage.new(image_name: image_url, cache_path: cached_image_path, cache_key: cache_key)
 
     puts 'Checking app image cache...'
-    send_worker_event('docker_build_started', notes: { loading_from_cache: true }.to_json)
-    send_worker_event('app_image_load_started')
+    send_task_event('docker_build_started', notes: { loading_from_cache: true }.to_json)
+    send_task_event('app_image_load_started')
     success, duration = Benchmarking.duration { cached_image.load }
-    send_worker_event('app_image_load_finished', notes: { load_time_seconds: duration }.to_json)
+    send_task_event('app_image_load_finished', notes: { load_time_seconds: duration }.to_json)
 
     if success
       system("docker tag #{image_url} saturnci-local")

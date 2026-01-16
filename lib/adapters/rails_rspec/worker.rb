@@ -58,7 +58,7 @@ module Adapters
 
       def clone_and_configure
         @executor.clone_repo
-        @executor.send_worker_event('repo_cloned')
+        @executor.send_task_event('repo_cloned')
         @executor.write_env_file
 
         puts 'Copying database.yml...'
@@ -88,7 +88,7 @@ module Adapters
       def setup_database
         puts 'Setting up database...'
         system("#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
-        @executor.send_worker_event('database_setup_finished')
+        @executor.send_task_event('database_setup_finished')
       end
 
       def run_dry_run
@@ -99,7 +99,7 @@ module Adapters
         dry_run_json = `#{command}`
         @test_case_identifiers = JSON.parse(dry_run_json)['examples'].map { |example| example['id'] }
         puts "Found #{@test_case_identifiers.count} test cases"
-        @executor.send_worker_event('dry_run_finished')
+        @executor.send_task_event('dry_run_finished')
       end
 
       def run_tests
@@ -139,7 +139,7 @@ module Adapters
         test_set_data = JSON.parse(test_set_response.body)
         @grouped_tests = test_set_data['grouped_tests']
         @dry_run_example_count = test_set_data['dry_run_example_count']
-        @executor.send_worker_event('test_set_received')
+        @executor.send_task_event('test_set_received')
 
         raise 'dry_run_example_count not set by server' if @dry_run_example_count.nil?
 
@@ -159,16 +159,16 @@ module Adapters
 
         docker_command = "#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} #{rspec_command}"
         puts "Running command: #{docker_command}"
-        @executor.send_worker_event('tests_started')
+        @executor.send_task_event('tests_started')
         system("#{docker_command} 2>&1")
         @rspec_exit_code = $CHILD_STATUS.exitstatus
-        @executor.send_worker_event('tests_finished')
+        @executor.send_task_event('tests_finished')
       end
 
       def precompile_assets
         puts 'Precompiling assets...'
         system("#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
-        @executor.send_worker_event('assets_precompiled')
+        @executor.send_task_event('assets_precompiled')
       end
 
       def send_results

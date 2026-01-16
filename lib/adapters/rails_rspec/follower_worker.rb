@@ -7,7 +7,7 @@ module Adapters
     class FollowerWorker < Worker
       def run
         puts 'Adapter: Ruby on Rails/RSpec (Follower)'
-        @executor.send_worker_event('worker_started')
+        @executor.send_task_event('worker_started')
 
         clone_and_configure
         prepare_docker
