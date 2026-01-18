@@ -103,7 +103,7 @@ module Adapters
         puts 'Current container status:'
         system("#{self.class.docker_compose_base_command} ps 2>&1")
 
-        command = "timeout 120 #{self.class.docker_compose_base_command} run -T #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec 2>&1"
+        command = "timeout 30 #{self.class.docker_compose_base_command} run -T #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec 2>&1"
         puts 'Command:'
         puts command
         puts 'Starting dry run...'
