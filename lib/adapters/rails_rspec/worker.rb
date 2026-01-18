@@ -159,7 +159,12 @@ module Adapters
 
         # Extract JSON from output (docker-compose may prepend messages like "Creating container...")
         json_start = dry_run_output.index('{')
-        raise 'No JSON found in dry run output' unless json_start
+        unless json_start
+          puts 'ERROR: No JSON found in dry run output'
+          puts "Full output (#{dry_run_output.length} bytes):"
+          puts dry_run_output
+          raise 'No JSON found in dry run output'
+        end
 
         dry_run_json = dry_run_output[json_start..]
         @test_case_identifiers = JSON.parse(dry_run_json)['examples'].map { |example| example['id'] }
