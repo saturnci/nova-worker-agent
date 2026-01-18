@@ -25,7 +25,7 @@ module Adapters
         project_name = docker_compose_project_name
         raise 'docker_compose_project_name is empty' if project_name.to_s.strip.empty?
 
-        "docker-compose -p #{project_name} -f #{DOCKER_COMPOSE_FILE}"
+        "docker-compose -p '#{project_name}' -f #{DOCKER_COMPOSE_FILE}"
       end
 
       def initialize(executor)
