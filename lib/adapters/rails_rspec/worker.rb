@@ -93,7 +93,7 @@ module Adapters
 
       def setup_database
         puts 'Setting up database...'
-        system("#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
+        system("#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load db:migrate 2>&1")
         @executor.send_task_event('database_setup_finished')
       end
 
