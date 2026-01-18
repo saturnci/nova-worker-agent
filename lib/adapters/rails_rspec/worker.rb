@@ -99,10 +99,19 @@ module Adapters
 
       def run_dry_run
         puts 'Running dry run to get test case identifiers...'
-        command = "#{self.class.docker_compose_base_command} run -T #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec 2>&1"
+
+        puts 'Current container status:'
+        system("#{self.class.docker_compose_base_command} ps 2>&1")
+
+        command = "timeout 120 #{self.class.docker_compose_base_command} run -T #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec 2>&1"
         puts 'Command:'
         puts command
+        puts 'Starting dry run...'
         dry_run_json = `#{command}`
+        puts "Dry run exit status: #{$CHILD_STATUS.exitstatus}"
+        puts "Dry run output length: #{dry_run_json.length} bytes"
+        puts "Dry run output (first 1000 chars): #{dry_run_json[0..1000]}"
+
         @test_case_identifiers = JSON.parse(dry_run_json)['examples'].map { |example| example['id'] }
         puts "Found #{@test_case_identifiers.count} test cases"
         @executor.send_task_event('dry_run_finished')
