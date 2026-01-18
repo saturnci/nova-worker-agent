@@ -113,8 +113,8 @@ module Adapters
         pid = spawn(command, out: '/tmp/dry_run_output.txt', err: '/tmp/dry_run_output.txt')
         puts "Dry run PID: #{pid}"
 
-        # Monitor for up to 30 seconds
-        30.times do |i|
+        # Monitor for up to 120 seconds
+        120.times do |i|
           sleep 1
           # Check if process is still running
           begin
@@ -130,7 +130,7 @@ module Adapters
         # Kill if still running
         begin
           Process.getpgid(pid)
-          puts 'Killing dry run after 30 seconds'
+          puts 'Killing dry run after 120 seconds'
           Process.kill('TERM', pid)
           sleep 1
           begin
