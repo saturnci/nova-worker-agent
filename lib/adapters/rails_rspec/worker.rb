@@ -99,7 +99,7 @@ module Adapters
 
       def run_dry_run
         puts 'Running dry run to get test case identifiers...'
-        command = "#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec"
+        command = "#{self.class.docker_compose_base_command} run -T #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec 2>&1"
         puts 'Command:'
         puts command
         dry_run_json = `#{command}`
