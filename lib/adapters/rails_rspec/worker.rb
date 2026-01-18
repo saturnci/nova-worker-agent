@@ -103,14 +103,59 @@ module Adapters
         puts 'Current container status:'
         system("#{self.class.docker_compose_base_command} ps 2>&1")
 
-        command = "timeout 30 #{self.class.docker_compose_base_command} run -T #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec 2>&1"
+        # Run in background so we can monitor it
+        command = "#{self.class.docker_compose_base_command} run -T #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec"
         puts 'Command:'
         puts command
-        puts 'Starting dry run...'
-        dry_run_json = `#{command}`
-        puts "Dry run exit status: #{$CHILD_STATUS.exitstatus}"
+        puts 'Starting dry run in background...'
+
+        # Start command in background, capture PID
+        pid = spawn(command, out: '/tmp/dry_run_output.txt', err: '/tmp/dry_run_output.txt')
+        puts "Dry run PID: #{pid}"
+
+        # Monitor for up to 30 seconds
+        30.times do |i|
+          sleep 1
+          # Check if process is still running
+          begin
+            Process.getpgid(pid)
+            puts "Second #{i + 1}: still running. Docker containers:"
+            system("docker ps --format 'table {{.Names}}\t{{.Status}}' 2>&1 | head -10")
+          rescue Errno::ESRCH
+            puts "Process finished after #{i + 1} seconds"
+            break
+          end
+        end
+
+        # Kill if still running
+        begin
+          Process.getpgid(pid)
+          puts 'Killing dry run after 30 seconds'
+          Process.kill('TERM', pid)
+          sleep 1
+          begin
+            Process.kill('KILL', pid)
+          rescue Errno::ESRCH
+            # Already dead
+          end
+        rescue Errno::ESRCH
+          # Already dead
+        end
+
+        begin
+          Process.wait(pid)
+        rescue Errno::ECHILD
+          # No child
+        end
+
+        dry_run_json = begin
+          File.read('/tmp/dry_run_output.txt')
+        rescue StandardError
+          ''
+        end
         puts "Dry run output length: #{dry_run_json.length} bytes"
-        puts "Dry run output (first 1000 chars): #{dry_run_json[0..1000]}"
+        puts 'Dry run output (first 2000 chars):'
+        puts dry_run_json[0..2000]
 
         @test_case_identifiers = JSON.parse(dry_run_json)['examples'].map { |example| example['id'] }
         puts "Found #{@test_case_identifiers.count} test cases"
