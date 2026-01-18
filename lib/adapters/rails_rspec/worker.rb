@@ -148,15 +148,20 @@ module Adapters
           # No child
         end
 
-        dry_run_json = begin
+        dry_run_output = begin
           File.read('/tmp/dry_run_output.txt')
         rescue StandardError
           ''
         end
-        puts "Dry run output length: #{dry_run_json.length} bytes"
+        puts "Dry run output length: #{dry_run_output.length} bytes"
         puts 'Dry run output (first 2000 chars):'
-        puts dry_run_json[0..2000]
+        puts dry_run_output[0..2000]
 
+        # Extract JSON from output (docker-compose may prepend messages like "Creating container...")
+        json_start = dry_run_output.index('{')
+        raise 'No JSON found in dry run output' unless json_start
+
+        dry_run_json = dry_run_output[json_start..]
         @test_case_identifiers = JSON.parse(dry_run_json)['examples'].map { |example| example['id'] }
         puts "Found #{@test_case_identifiers.count} test cases"
         @executor.send_task_event('dry_run_finished')
