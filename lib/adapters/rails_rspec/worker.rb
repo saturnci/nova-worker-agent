@@ -44,6 +44,7 @@ module Adapters
         @executor.finish
         @executor.clean_up_docker
         @executor.kill_stream
+        FileUtils.rm_rf(Executor.project_dir)
       end
 
       private
