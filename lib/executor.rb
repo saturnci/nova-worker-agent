@@ -65,18 +65,34 @@ class Executor
   end
 
   def clone_repo
-    puts 'Getting GitHub token...'
-    token_response = @client.post('github_tokens', { github_installation_id: @task_info['github_installation_id'] })
+    installation_id = @task_info['github_installation_id']
+    puts "Getting GitHub token for installation_id=#{installation_id}..."
+    puts "Client host: #{@host}"
+    puts 'About to POST to github_tokens...'
+    $stdout.flush
+
+    begin
+      token_response = @client.post('github_tokens', { github_installation_id: installation_id })
+    rescue StandardError => e
+      puts "ERROR during github_tokens POST: #{e.class}: #{e.message}"
+      puts e.backtrace.first(10).join("\n")
+      $stdout.flush
+      raise
+    end
+
     puts "GitHub token response code: #{token_response.code}"
+    $stdout.flush
     raise "GitHub token request failed with status #{token_response.code}: #{token_response.body}" unless token_response.code.to_i == 200
 
     github_token = token_response.body
     raise 'GitHub token is blank' if github_token.nil? || github_token.strip.empty?
 
     puts "GitHub token received (length=#{github_token.length})"
+    $stdout.flush
 
     repo_full_name = @task_info['github_repo_full_name']
     puts "Cloning #{repo_full_name}..."
+    $stdout.flush
     FileUtils.rm_rf(self.class.project_dir)
     clone_command = "git clone --recurse-submodules https://x-access-token:#{github_token}@github.com/#{repo_full_name} #{self.class.project_dir}"
     clone_success = system(clone_command)
@@ -85,10 +101,12 @@ class Executor
     Dir.chdir(self.class.project_dir)
     commit_hash = @task_info['commit_hash']
     puts "Checking out commit #{commit_hash}..."
+    $stdout.flush
     checkout_success = system("git checkout #{commit_hash}")
     raise "git checkout failed for #{commit_hash} (exit status: #{$CHILD_STATUS.exitstatus})" unless checkout_success
 
     puts 'Repo cloned and checked out successfully.'
+    $stdout.flush
     system('ls -la 2>&1')
   end
 
