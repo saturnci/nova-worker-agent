@@ -67,16 +67,26 @@ class Executor
   def clone_repo
     puts 'Getting GitHub token...'
     token_response = @client.post('github_tokens', { github_installation_id: @task_info['github_installation_id'] })
-    github_token = token_response.body
+    puts "GitHub token response code: #{token_response.code}"
+    raise "GitHub token request failed with status #{token_response.code}: #{token_response.body}" unless token_response.code.to_i == 200
 
-    puts "Cloning #{@task_info['github_repo_full_name']}..."
+    github_token = token_response.body
+    raise 'GitHub token is blank' if github_token.nil? || github_token.strip.empty?
+
+    puts "GitHub token received (length=#{github_token.length})"
+
+    repo_full_name = @task_info['github_repo_full_name']
+    puts "Cloning #{repo_full_name}..."
     FileUtils.rm_rf(self.class.project_dir)
-    clone_command = "git clone --recurse-submodules https://x-access-token:#{github_token}@github.com/#{@task_info['github_repo_full_name']} #{self.class.project_dir}"
-    system(clone_command)
+    clone_command = "git clone --recurse-submodules https://x-access-token:#{github_token}@github.com/#{repo_full_name} #{self.class.project_dir}"
+    clone_success = system(clone_command)
+    raise "git clone failed (exit status: #{$CHILD_STATUS.exitstatus})" unless clone_success
 
     Dir.chdir(self.class.project_dir)
-    puts "Checking out commit #{@task_info['commit_hash']}..."
-    system("git checkout #{@task_info['commit_hash']}")
+    commit_hash = @task_info['commit_hash']
+    puts "Checking out commit #{commit_hash}..."
+    checkout_success = system("git checkout #{commit_hash}")
+    raise "git checkout failed for #{commit_hash} (exit status: #{$CHILD_STATUS.exitstatus})" unless checkout_success
 
     puts 'Repo cloned and checked out successfully.'
     system('ls -la 2>&1')
