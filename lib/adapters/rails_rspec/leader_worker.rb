@@ -19,15 +19,6 @@ module Adapters
         @executor.send_task_event('setup_completed')
 
         execute_test_workflow
-      rescue StandardError => e
-        puts "FATAL ERROR in LeaderWorker#run: #{e.class}: #{e.message}"
-        puts e.backtrace.first(20).join("\n")
-        $stdout.flush
-      ensure
-        @executor.finish
-        @executor.clean_up_docker
-        @executor.kill_stream
-        FileUtils.rm_rf(Executor.project_dir)
       end
 
       private
