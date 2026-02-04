@@ -14,14 +14,14 @@ module Adapters
       DOCKER_SERVICE_NAME = 'saturn_test_app'
       DOCKER_COMPOSE_FILE = '.saturnci/docker-compose.yml'
 
-      def self.docker_compose_project_name
-        task_id = ENV.fetch('TASK_ID')
-        raise 'TASK_ID is empty' if task_id.to_s.strip.empty?
+      def docker_compose_project_name
+        task_id = @executor.task_id
+        raise 'task_id is empty' if task_id.to_s.strip.empty?
 
         "task-#{task_id}"
       end
 
-      def self.docker_compose_base_command
+      def docker_compose_base_command
         project_name = docker_compose_project_name
         raise 'docker_compose_project_name is empty' if project_name.to_s.strip.empty?
 
@@ -94,13 +94,13 @@ module Adapters
 
       def setup_database
         puts 'Setting up database...'
-        system("#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
+        system("#{docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rails db:create db:schema:load 2>&1")
         @executor.send_task_event('database_setup_finished')
       end
 
       def run_dry_run
         puts 'Running dry run to get test case identifiers...'
-        dry_run_output = `#{self.class.docker_compose_base_command} run -T #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec 2>&1`
+        dry_run_output = `#{docker_compose_base_command} run -T #{DOCKER_SERVICE_NAME} bundle exec rspec --dry-run --format json ./spec 2>&1`
 
         # Extract JSON from output (docker-compose may prepend messages like "Creating container...")
         json_start = dry_run_output.index('{')
@@ -173,7 +173,7 @@ module Adapters
           '$(cat /tmp/spec_files.txt)'
         ].join(' ')
 
-        docker_command = "#{self.class.docker_compose_base_command} run -v #{spec_files_path}:/tmp/spec_files.txt #{DOCKER_SERVICE_NAME} sh -c '#{rspec_command}'"
+        docker_command = "#{docker_compose_base_command} run -v #{spec_files_path}:/tmp/spec_files.txt #{DOCKER_SERVICE_NAME} sh -c '#{rspec_command}'"
         puts "Running command: #{docker_command}"
         @executor.send_task_event('tests_started')
         system("#{docker_command} 2>&1")
@@ -183,7 +183,7 @@ module Adapters
 
       def precompile_assets
         puts 'Precompiling assets...'
-        system("#{self.class.docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
+        system("#{docker_compose_base_command} run #{DOCKER_SERVICE_NAME} bundle exec rails assets:precompile 2>&1")
         @executor.send_task_event('assets_precompiled')
       end
 
