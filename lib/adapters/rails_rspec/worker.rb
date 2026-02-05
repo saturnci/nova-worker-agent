@@ -45,8 +45,6 @@ module Adapters
         FileUtils.rm_rf(Executor.project_dir)
       end
 
-      private
-
       def finish
         send_results
         puts 'Task finished.'
