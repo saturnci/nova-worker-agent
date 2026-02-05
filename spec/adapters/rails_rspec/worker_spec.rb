@@ -44,7 +44,6 @@ RSpec.describe Adapters::RailsRSpec::Worker do
       allow(Executor).to receive(:project_dir).and_return('/repository')
     end
 
-    # WEAKNESS 4: mock-heavy test verifies method calls rather than behavior
     it 'uploads json_output.json to the json_output endpoint' do
       request = instance_double(SaturnCIWorkerAPI::FileContentRequest)
       response = instance_double('Response', code: '200', body: '')
