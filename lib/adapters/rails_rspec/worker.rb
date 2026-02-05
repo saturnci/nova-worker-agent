@@ -18,6 +18,19 @@ module Adapters
         @executor = executor
       end
 
+      def execute_test_workflow
+        run_tests
+        finish
+      rescue StandardError => e
+        puts "ERROR: #{e.class}: #{e.message}"
+        puts e.backtrace.join("\n")
+      ensure
+        @executor.finish
+        @executor.clean_up_docker
+        @executor.kill_stream
+        FileUtils.rm_rf(Executor.project_dir)
+      end
+
       def docker_compose_project_name
         task_id = @executor.task_id
         raise 'task_id is empty' if task_id.to_s.strip.empty?
@@ -30,19 +43,6 @@ module Adapters
         raise 'docker_compose_project_name is empty' if project_name.to_s.strip.empty?
 
         "docker-compose -p '#{project_name}' -f #{DOCKER_COMPOSE_FILE}"
-      end
-
-      def execute_test_workflow
-        run_tests
-        finish
-      rescue StandardError => e
-        puts "ERROR: #{e.class}: #{e.message}"
-        puts e.backtrace.join("\n")
-      ensure
-        @executor.finish
-        @executor.clean_up_docker
-        @executor.kill_stream
-        FileUtils.rm_rf(Executor.project_dir)
       end
 
       def finish
