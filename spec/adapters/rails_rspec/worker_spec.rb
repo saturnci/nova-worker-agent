@@ -23,4 +23,37 @@ RSpec.describe Adapters::RailsRSpec::Worker do
       end
     end
   end
+
+  describe '#send_results' do
+    let!(:executor) do
+      Executor.new(
+        host: 'https://api.example.com',
+        client: nil,
+        worker_id: nil,
+        task_id: '123'
+      )
+    end
+
+    let!(:worker) { Adapters::RailsRSpec::Worker.new(executor) }
+
+    before do
+      allow(worker).to receive(:puts)
+      allow(Executor).to receive(:project_dir).and_return('/repository')
+    end
+
+    it 'uploads json_output.json to the json_output endpoint' do
+      request = instance_double(SaturnCIWorkerAPI::FileContentRequest)
+      response = instance_double('Response', code: '200', body: '')
+
+      expect(SaturnCIWorkerAPI::FileContentRequest).to receive(:new).with(
+        host: 'https://api.example.com',
+        api_path: 'tasks/123/json_output',
+        content_type: 'application/json',
+        file_path: '/repository/tmp/json_output.json'
+      ).and_return(request)
+      expect(request).to receive(:execute).and_return(response)
+
+      worker.send(:send_results)
+    end
+  end
 end
