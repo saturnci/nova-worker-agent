@@ -6,6 +6,8 @@ require_relative '../../../lib/adapters/rails_rspec/worker'
 RSpec.describe Adapters::RailsRSpec::Worker do
   describe '#docker_compose_project_name' do
     context 'when task_id is a non-empty string' do
+      # WEAKNESS 1: instance_double wouldn't catch missing methods on Executor
+      # WEAKNESS 2: duplicated setup (executor/worker defined in each context)
       let!(:executor) { instance_double(Executor, task_id: '123') }
       let!(:worker) { Adapters::RailsRSpec::Worker.new(executor) }
 
@@ -15,6 +17,7 @@ RSpec.describe Adapters::RailsRSpec::Worker do
     end
 
     context 'when task_id is empty' do
+      # WEAKNESS 2: duplicated setup (executor/worker defined in each context)
       let!(:executor) { instance_double(Executor, task_id: '') }
       let!(:worker) { Adapters::RailsRSpec::Worker.new(executor) }
 
@@ -41,6 +44,8 @@ RSpec.describe Adapters::RailsRSpec::Worker do
       allow(Executor).to receive(:project_dir).and_return('/repository')
     end
 
+    # WEAKNESS 3: testing private method directly via send()
+    # WEAKNESS 4: mock-heavy test verifies method calls rather than behavior
     it 'uploads json_output.json to the json_output endpoint' do
       request = instance_double(SaturnCIWorkerAPI::FileContentRequest)
       response = instance_double('Response', code: '200', body: '')
