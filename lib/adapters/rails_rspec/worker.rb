@@ -14,6 +14,10 @@ module Adapters
       DOCKER_SERVICE_NAME = 'saturn_test_app'
       DOCKER_COMPOSE_FILE = '.saturnci/docker-compose.yml'
 
+      def initialize(executor)
+        @executor = executor
+      end
+
       def docker_compose_project_name
         task_id = @executor.task_id
         raise 'task_id is empty' if task_id.to_s.strip.empty?
@@ -27,12 +31,6 @@ module Adapters
 
         "docker-compose -p '#{project_name}' -f #{DOCKER_COMPOSE_FILE}"
       end
-
-      def initialize(executor)
-        @executor = executor
-      end
-
-      protected
 
       def execute_test_workflow
         run_tests
