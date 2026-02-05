@@ -17,7 +17,7 @@ class Executor
     ENV.fetch('PROJECT_DIR', '/repository')
   end
 
-  attr_reader :task_info, :client, :task_id
+  attr_reader :task_info, :client, :task_id, :host
 
   def initialize(host:, task_id:, worker_id:, client:)
     @host = host
