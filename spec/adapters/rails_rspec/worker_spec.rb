@@ -6,9 +6,10 @@ require_relative '../../../lib/adapters/rails_rspec/worker'
 RSpec.describe Adapters::RailsRSpec::Worker do
   describe '#docker_compose_project_name' do
     context 'when task_id is a non-empty string' do
-      # WEAKNESS 1: instance_double wouldn't catch missing methods on Executor
       # WEAKNESS 2: duplicated setup (executor/worker defined in each context)
-      let!(:executor) { instance_double(Executor, task_id: '123') }
+      let!(:executor) do
+        Executor.new(host: 'https://api.example.com', client: nil, worker_id: nil, task_id: '123')
+      end
       let!(:worker) { Adapters::RailsRSpec::Worker.new(executor) }
 
       it 'returns "task-" followed by the task_id' do
@@ -18,7 +19,9 @@ RSpec.describe Adapters::RailsRSpec::Worker do
 
     context 'when task_id is empty' do
       # WEAKNESS 2: duplicated setup (executor/worker defined in each context)
-      let!(:executor) { instance_double(Executor, task_id: '') }
+      let!(:executor) do
+        Executor.new(host: 'https://api.example.com', client: nil, worker_id: nil, task_id: '')
+      end
       let!(:worker) { Adapters::RailsRSpec::Worker.new(executor) }
 
       it 'raises an error' do
