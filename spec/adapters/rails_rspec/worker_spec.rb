@@ -5,12 +5,13 @@ require_relative '../../../lib/adapters/rails_rspec/worker'
 
 RSpec.describe Adapters::RailsRSpec::Worker do
   describe '#docker_compose_project_name' do
+    let!(:executor) do
+      Executor.new(host: 'https://api.example.com', client: nil, worker_id: nil, task_id: task_id)
+    end
+    let!(:worker) { Adapters::RailsRSpec::Worker.new(executor) }
+
     context 'when task_id is a non-empty string' do
-      # WEAKNESS 2: duplicated setup (executor/worker defined in each context)
-      let!(:executor) do
-        Executor.new(host: 'https://api.example.com', client: nil, worker_id: nil, task_id: '123')
-      end
-      let!(:worker) { Adapters::RailsRSpec::Worker.new(executor) }
+      let!(:task_id) { '123' }
 
       it 'returns "task-" followed by the task_id' do
         expect(worker.docker_compose_project_name).to eq('task-123')
@@ -18,11 +19,7 @@ RSpec.describe Adapters::RailsRSpec::Worker do
     end
 
     context 'when task_id is empty' do
-      # WEAKNESS 2: duplicated setup (executor/worker defined in each context)
-      let!(:executor) do
-        Executor.new(host: 'https://api.example.com', client: nil, worker_id: nil, task_id: '')
-      end
-      let!(:worker) { Adapters::RailsRSpec::Worker.new(executor) }
+      let!(:task_id) { '' }
 
       it 'raises an error' do
         expect { worker.docker_compose_project_name }.to raise_error('task_id is empty')
