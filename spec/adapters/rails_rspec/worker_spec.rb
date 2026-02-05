@@ -44,7 +44,6 @@ RSpec.describe Adapters::RailsRSpec::Worker do
       allow(Executor).to receive(:project_dir).and_return('/repository')
     end
 
-    # WEAKNESS 3: testing private method directly via send()
     # WEAKNESS 4: mock-heavy test verifies method calls rather than behavior
     it 'uploads json_output.json to the json_output endpoint' do
       request = instance_double(SaturnCIWorkerAPI::FileContentRequest)
@@ -58,7 +57,7 @@ RSpec.describe Adapters::RailsRSpec::Worker do
       ).and_return(request)
       expect(request).to receive(:execute).and_return(response)
 
-      worker.send(:send_results)
+      worker.send_results
     end
   end
 end
