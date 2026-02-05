@@ -19,7 +19,16 @@ module Adapters
       end
 
       def execute_test_workflow
-        run_tests
+        puts 'Running tests...'
+        setup_test_output_stream
+
+        execute_tests
+
+        sleep 2
+        @test_output_stream.kill
+
+        puts "COMMAND_EXIT_CODE=\"#{@rspec_exit_code}\""
+
         finish
       rescue StandardError => e
         puts "ERROR: #{e.class}: #{e.message}"
@@ -106,18 +115,6 @@ module Adapters
         @test_case_identifiers = JSON.parse(dry_run_json)['examples'].map { |example| example['id'] }
         puts "Found #{@test_case_identifiers.count} test cases"
         @executor.send_task_event('dry_run_finished')
-      end
-
-      def run_tests
-        puts 'Running tests...'
-        setup_test_output_stream
-
-        execute_tests
-
-        sleep 2
-        @test_output_stream.kill
-
-        puts "COMMAND_EXIT_CODE=\"#{@rspec_exit_code}\""
       end
 
       def setup_test_output_stream
