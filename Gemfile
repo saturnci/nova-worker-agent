@@ -3,6 +3,7 @@
 source 'https://rubygems.org'
 
 gem 'base64'
+gem 'benchmark'
 gem 'json'
 
 group :development, :test do
