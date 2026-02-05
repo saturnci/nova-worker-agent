@@ -29,7 +29,9 @@ module Adapters
 
         puts "COMMAND_EXIT_CODE=\"#{@rspec_exit_code}\""
 
-        finish
+        send_results
+        puts 'Task finished.'
+        @executor.finish
       rescue StandardError => e
         puts "ERROR: #{e.class}: #{e.message}"
         puts e.backtrace.join("\n")
@@ -52,12 +54,6 @@ module Adapters
         raise 'docker_compose_project_name is empty' if project_name.to_s.strip.empty?
 
         "docker-compose -p '#{project_name}' -f #{DOCKER_COMPOSE_FILE}"
-      end
-
-      def finish
-        send_results
-        puts 'Task finished.'
-        @executor.finish
       end
 
       def task_info
