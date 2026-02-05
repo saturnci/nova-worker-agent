@@ -120,7 +120,7 @@ module Adapters
 
         @test_output_stream = SaturnCIWorkerAPI::Stream.new(
           test_output_file,
-          "tasks/#{ENV.fetch('TASK_ID')}/test_output",
+          "tasks/#{@executor.task_id}/test_output",
           wait_interval: 1
         )
         @test_output_stream.start
@@ -129,7 +129,7 @@ module Adapters
       def fetch_test_set
         puts 'Getting test case instructions from server...'
         test_set_response = SaturnCIWorkerAPI::Request.new(
-          host: ENV.fetch('SATURNCI_API_HOST'),
+          host: @executor.host,
           method: :post,
           endpoint: "test_suite_runs/#{test_suite_run_id}/test_set",
           body: { test_files: @test_case_identifiers }.to_json
@@ -179,8 +179,8 @@ module Adapters
       def send_results
         puts 'Sending JSON output...'
         json_output_request = SaturnCIWorkerAPI::FileContentRequest.new(
-          host: ENV.fetch('SATURNCI_API_HOST'),
-          api_path: "tasks/#{ENV.fetch('TASK_ID')}/json_output",
+          host: @executor.host,
+          api_path: "tasks/#{@executor.task_id}/json_output",
           content_type: 'application/json',
           file_path: "#{Executor.project_dir}/tmp/json_output.json"
         )
